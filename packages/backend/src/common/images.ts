@@ -71,6 +71,59 @@ export const nodeHasImageFill = (node: MinimalFillsMixin): Boolean =>
 export const nodeHasMultipleFills = (node: MinimalFillsMixin) =>
   node.fills instanceof Array && node.fills.length > 1;
 
+/**
+ * Get the top image fill from a node
+ */
+export const getTopImageFill = (node: MinimalFillsMixin): ImagePaint | null => {
+  const imageFills = getImageFills(node);
+  return imageFills.length > 0 ? imageFills[0] : null;
+};
+
+/**
+ * Convert Figma's scaleMode to CSS object-fit property
+ * Used for <img> tags
+ */
+export const scaleModeToObjectFit = (scaleMode: 'FILL' | 'FIT' | 'TILE' | 'STRETCH'): string => {
+  switch (scaleMode) {
+    case 'FIT':
+      return 'contain';  // FIT maintains aspect ratio and fits within bounds
+    case 'FILL':
+      return 'cover';    // FILL covers entire area, may crop
+    case 'STRETCH':
+      return 'fill';     // STRETCH distorts to fill area
+    case 'TILE':
+      return 'none';     // TILE repeats the image
+    default:
+      return 'cover';    // Default to cover for safety
+  }
+};
+
+/**
+ * Convert Figma's scaleMode to CSS background-size property
+ * Used for background-image on divs
+ */
+export const scaleModeToBackgroundSize = (scaleMode: 'FILL' | 'FIT' | 'TILE' | 'STRETCH'): string => {
+  switch (scaleMode) {
+    case 'FIT':
+      return 'contain';    // FIT maintains aspect ratio and fits within bounds
+    case 'FILL':
+      return 'cover';      // FILL covers entire area, may crop
+    case 'STRETCH':
+      return '100% 100%';  // STRETCH distorts to fill area
+    case 'TILE':
+      return 'auto';       // TILE uses original size for repeating
+    default:
+      return 'cover';      // Default to cover for safety
+  }
+};
+
+/**
+ * Get background-repeat value based on scaleMode
+ */
+export const scaleModeToBackgroundRepeat = (scaleMode: 'FILL' | 'FIT' | 'TILE' | 'STRETCH'): string | null => {
+  return scaleMode === 'TILE' ? 'repeat' : null;
+};
+
 const imageBytesToBase64 = (bytes: Uint8Array): string => {
   // Convert Uint8Array to binary string
   const binaryString = bytes.reduce((data, byte) => {

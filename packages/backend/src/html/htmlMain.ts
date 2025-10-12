@@ -16,6 +16,10 @@ import {
   exportNodeAsBase64PNG,
   getPlaceholderImage,
   nodeHasImageFill,
+  getTopImageFill,
+  scaleModeToObjectFit,
+  scaleModeToBackgroundSize,
+  scaleModeToBackgroundRepeat,
 } from "../common/images";
 import { addWarning } from "../common/commonConversionWarnings";
 
@@ -611,6 +615,10 @@ const htmlContainer = async (
       const hasChildren = "children" in node && node.children.length > 0;
       let imgUrl = "";
 
+      // Get the image fill to extract scaleMode
+      const imageFill = getTopImageFill(node);
+      const scaleMode = imageFill?.scaleMode || 'FILL';
+
       if (
         settings.embedImages &&
         (settings as PluginSettings).framework === "HTML"
@@ -622,6 +630,7 @@ const htmlContainer = async (
       }
 
       if (hasChildren) {
+        // Background image approach for containers with children
         builder.addStyles(
           formatWithJSX(
             "background-image",
@@ -629,9 +638,40 @@ const htmlContainer = async (
             `url(${imgUrl})`,
           ),
         );
+
+        // Add background-size based on scaleMode
+        builder.addStyles(
+          formatWithJSX(
+            "background-size",
+            settings.htmlGenerationMode === "jsx",
+            scaleModeToBackgroundSize(scaleMode),
+          ),
+        );
+
+        // Add background-repeat for TILE mode
+        const backgroundRepeat = scaleModeToBackgroundRepeat(scaleMode);
+        if (backgroundRepeat) {
+          builder.addStyles(
+            formatWithJSX(
+              "background-repeat",
+              settings.htmlGenerationMode === "jsx",
+              backgroundRepeat,
+            ),
+          );
+        }
       } else {
+        // <img> tag approach for image-only nodes
         tag = "img";
         src = ` src="${imgUrl}"`;
+
+        // Add object-fit based on scaleMode
+        builder.addStyles(
+          formatWithJSX(
+            "object-fit",
+            settings.htmlGenerationMode === "jsx",
+            scaleModeToObjectFit(scaleMode),
+          ),
+        );
       }
     }
 
