@@ -11,6 +11,7 @@ import {
   generateUniqueClassName,
   stylesToCSS,
   getComponentName,
+  fontCollector,
 } from "./htmlMain";
 
 export class HtmlTextBuilder extends HtmlDefaultBuilder {
@@ -37,6 +38,13 @@ export class HtmlTextBuilder extends HtmlDefaultBuilder {
     }
 
     return segments.map((segment, index) => {
+      // Collect font information for later import generation
+      fontCollector.addFont(
+        segment.fontName.family,
+        segment.fontWeight,
+        segment.fontName.style,
+      );
+
       // Prepare additional CSS properties from layer blur and drop shadow effects.
       const additionalStyles: { [key: string]: string } = {};
 

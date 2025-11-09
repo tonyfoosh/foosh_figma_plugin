@@ -217,11 +217,8 @@ const shouldShowActionButtons = (warning: string): boolean => {
 };
 
 const getDocsLinkForWarning = (warning: string): string => {
-  // Example URLs - in reality you would point to specific documentation pages
-  if (warning.toLowerCase().includes("unsupported")) {
-    return "https://github.com/bernaferrari/figma-to-code/wiki/Supported-Elements";
-  }
-  return "https://github.com/bernaferrari/figma-to-code/wiki";
+  // Documentation links - update when available
+  return "";
 };
 
 export default WarningsPanel;

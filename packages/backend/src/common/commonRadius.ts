@@ -1,6 +1,10 @@
 import { CornerRadius } from "types";
 
 export const getCommonRadius = (node: SceneNode): CornerRadius => {
+  // Extract cornerSmoothing if available
+  const cornerSmoothing =
+    "cornerSmoothing" in node ? (node.cornerSmoothing as number) : undefined;
+
   if ("rectangleCornerRadii" in node) {
     const [topLeft, topRight, bottomRight, bottomLeft] =
       node.rectangleCornerRadii as any;
@@ -9,7 +13,7 @@ export const getCommonRadius = (node: SceneNode): CornerRadius => {
       topLeft === bottomRight &&
       topLeft === bottomLeft
     ) {
-      return { all: topLeft };
+      return { all: topLeft, cornerSmoothing };
     }
 
     return {
@@ -17,6 +21,7 @@ export const getCommonRadius = (node: SceneNode): CornerRadius => {
       topRight,
       bottomRight,
       bottomLeft,
+      cornerSmoothing,
     };
   }
 
@@ -25,7 +30,7 @@ export const getCommonRadius = (node: SceneNode): CornerRadius => {
     node.cornerRadius !== figma.mixed &&
     node.cornerRadius
   ) {
-    return { all: node.cornerRadius };
+    return { all: node.cornerRadius, cornerSmoothing };
   }
 
   if ("topLeftRadius" in node) {
@@ -34,7 +39,7 @@ export const getCommonRadius = (node: SceneNode): CornerRadius => {
       node.topLeftRadius === node.bottomRightRadius &&
       node.topLeftRadius === node.bottomLeftRadius
     ) {
-      return { all: node.topLeftRadius };
+      return { all: node.topLeftRadius, cornerSmoothing };
     }
 
     return {
@@ -42,8 +47,9 @@ export const getCommonRadius = (node: SceneNode): CornerRadius => {
       topRight: node.topRightRadius,
       bottomRight: node.bottomRightRadius,
       bottomLeft: node.bottomLeftRadius,
+      cornerSmoothing,
     };
   }
 
-  return { all: 0 };
+  return { all: 0, cornerSmoothing };
 };

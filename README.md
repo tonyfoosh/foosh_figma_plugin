@@ -1,19 +1,17 @@
-<!-- <p align="center"><img src="assets/icon_256.png" alt="Figma to Code" height="128px"></p> -->
+# Foosh Figma Plugin
 
-[![Figma to Code](assets/git_preview.png)](https://www.figma.com/community/plugin/842128343887142055)
+**Extension for compositor node in foosh workflows**
 
-# Figma to Code
+Convert your Figma designs into clean HTML/CSS with support for advanced features like iOS-style squircles (corner smoothing), smart font imports, and pixel-perfect layouts.
 
-<p align="center">
-<a href="https://github.com/bernaferrari/FigmaToCode/actions/"><img src="https://github.com/bernaferrari/FigmaToCode/workflows/CI/badge.svg"/></a>
-<a href="https://codecov.io/gh/bernaferrari/FigmaToCode"><img src="https://codecov.io/gh/bernaferrari/FigmaToCode/branch/master/graph/badge.svg" /></a>
-<a href="http://twitter.com/bernaferrari">
-<img src="https://img.shields.io/badge/Twitter-@bernaferrari-brightgreen.svg?style=flat" alt="Twitter"/></a>
-</p><p align="center">
-<a href="https://www.figma.com/community/plugin/842128343887142055"><img src="assets/badge.png" height="60"/></a>
-</p>
+## Features
 
-Converting Figma designs into usable code can be a challenge, often requiring time-consuming manual work. Figma to Code simplifies that process. This plugin generates responsive layouts in `HTML`, `React (JSX)`, `Svelte`, `styled-components`, `Tailwind`, `Flutter`, and `SwiftUI` directly from your designs. Your feedback and ideas are always welcome.
+- **HTML/CSS Generation**: Export production-ready HTML and CSS from your Figma designs
+- **Squircle Support**: Full support for corner smoothing (iOS-style rounded corners)
+- **Smart Font Imports**: Automatically generates Google Fonts links and @font-face rules for custom fonts
+- **Responsive Layouts**: Preserves auto-layout and positioning
+- **Vector Support**: Exports vectors as inline SVG
+- **Dark Mode**: Clean black UI theme
 
 ![Gif showing the conversion](assets/lossy_gif.gif)
 
@@ -27,7 +25,7 @@ The plugin uses a sophisticated multi-step process to transform your Figma desig
 
 3. **Layout Optimization**: The plugin analyzes and optimizes layouts, detecting patterns like auto-layouts, responsive constraints and color variables.
 
-4. **Code Generation**: Finally, the optimized structure is transformed into the target framework's code, with special handling for each framework's unique patterns and best practices. If a feature is unsupported, the plugin will provide a warning.
+4. **Code Generation**: Finally, the optimized structure is transformed into HTML/CSS, with special handling for squircles, fonts, and other advanced features.
 
 ![Conversion Workflow](assets/workflow.png)
 
@@ -41,17 +39,13 @@ Converting visual designs to code inevitably encounters complex edge cases. Here
 
 2. **Color Variables**: The plugin detects and processes color variables, allowing for theme-consistent output.
 
-3. **Gradients and Effects**: Different frameworks handle gradients and effects in unique ways, requiring specialized conversion logic.
+3. **Gradients and Effects**: Specialized conversion logic for gradients, shadows, and blur effects.
+
+4. **Squircles**: iOS-style corner smoothing is rendered using CSS clip-path with SVG paths for pixel-perfect accuracy.
 
 ![Conversion Workflow](assets/examples.png)
 
 **Tip**: Instead of selecting the whole page, you can also select individual items. This can be useful for both debugging and componentization. For example: you can use the plugin to generate the code of a single element and then replicate it using a for-loop.
-
-### Todo
-
-- Vectors (possible to enable in HTML and Tailwind)
-- Images (possible to enable to inline them in HTML and Tailwind)
-- Line/Star/Polygon
 
 ## How to build the project
 
@@ -126,6 +120,19 @@ When running the `dev` task, you can open `http://localhost:3000` to see the deb
 
 ## Issues
 
-The Figma file for this README and icon is also open and welcome to changes! [Check it here.](https://www.figma.com/file/8buWpm6Mpq4yK9MhbkcdJB/Figma-to-Code)
+Found a bug? Have an idea for an improvement? Feel free to [add an issue](../../issues). Pull requests are also more than welcome.
 
-I took decisions thinking about how it would benefit the majority of people, but I can (and probably will!) be wrong many times. Found a bug? Have an idea for an improvement? Feel free to [add an issue](../../issues) or email me. Pull requests are also more than welcome.
+## Author
+
+**eppisai** - theamanamanaman@gmail.com
+
+## Attribution
+
+This plugin is based on [Figma to Code](https://github.com/bernaferrari/FigmaToCode) by Bernardo Ferrari.
+
+Original work: © Bernardo Ferrari
+Foosh modifications: © eppisai
+
+## License
+
+MIT

@@ -56,33 +56,17 @@ const About = ({
         <div className="w-16 h-16 bg-linear-to-br from-green-400 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg mb-3">
           <Code size={32} className="text-white" />
         </div>
-        <h2 className="text-2xl font-bold mb-1">Figma to Code</h2>
+        <h2 className="text-2xl font-bold mb-1">Foosh Figma Plugin</h2>
         <div className="flex items-center gap-1 text-neutral-600 dark:text-neutral-300">
-          <span>Created with</span>
-          <Heart size={14} className="text-red-500 fill-red-500" />
-          <span>by Bernardo Ferrari</span>
+          <span>Created by</span>
+          <span className="font-semibold">eppisai</span>
         </div>
+        <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+          Extension for compositor node in foosh workflows
+        </p>
         <div className="mt-3 flex gap-3">
           <a
-            href="https://github.com/bernaferrari"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="p-2 rounded-full bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-600 transition-colors"
-            aria-label="GitHub Profile"
-          >
-            <Github size={18} />
-          </a>
-          <a
-            href="https://twitter.com/bernaferrari"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="p-2 rounded-full bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-600 transition-colors"
-            aria-label="Twitter Profile"
-          >
-            <XLogo />
-          </a>
-          <a
-            href="mailto:bernaferrari2@gmail.com"
+            href="mailto:theamanamanaman@gmail.com"
             target="_blank"
             rel="noopener noreferrer"
             className="p-2 rounded-full bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-600 transition-colors"
@@ -122,18 +106,23 @@ const About = ({
             <h3 className="font-semibold text-base">Open Source</h3>
           </div>
           <p className="text-neutral-600 dark:text-neutral-300 leading-relaxed mb-3">
-            Figma to Code is completely open-source. Contributions, bug reports,
+            Foosh Figma Plugin is open-source. Contributions, bug reports,
             and feature requests are welcome!
           </p>
-          <a
-            href="https://github.com/bernaferrari/figmatocode"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-3 py-1.5 bg-neutral-100 dark:bg-neutral-700 rounded-md text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
-          >
-            <Star size={14} className="text-yellow-500 fill-yellow-500" />
-            <span>View on GitHub</span>
-          </a>
+          <div className="text-xs text-neutral-500 dark:text-neutral-400 p-3 bg-neutral-50 dark:bg-neutral-900 rounded-md">
+            <p className="mb-1">
+              <strong>Attribution:</strong> Based on{" "}
+              <a
+                href="https://github.com/bernaferrari/FigmaToCode"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-green-600 dark:text-green-400 hover:underline"
+              >
+                Figma to Code
+              </a>{" "}
+              by Bernardo Ferrari
+            </p>
+          </div>
         </div>
 
         {/* Features Card */}
@@ -150,20 +139,26 @@ const About = ({
                 <ArrowRightIcon size={12} />
               </div>
               <span>
-                Convert Figma designs to HTML, Tailwind, Flutter, and SwiftUI
+                Convert Figma designs to clean HTML/CSS
               </span>
             </li>
             <li className="flex items-start gap-2">
               <div className="mt-1.5">
                 <ArrowRightIcon size={12} />
               </div>
-              <span>Extract colors and gradients from your designs</span>
+              <span>Full support for iOS-style squircles (corner smoothing)</span>
             </li>
             <li className="flex items-start gap-2">
               <div className="mt-1.5">
                 <ArrowRightIcon size={12} />
               </div>
-              <span>Get responsive code that matches your design</span>
+              <span>Smart font imports for Google Fonts and custom fonts</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <div className="mt-1.5">
+                <ArrowRightIcon size={12} />
+              </div>
+              <span>Responsive layouts with auto-layout support</span>
             </li>
           </ul>
         </div>
@@ -185,22 +180,13 @@ const About = ({
           </p>
           <div className="space-y-2">
             <a
-              href="mailto:bernaferrari2@gmail.com"
+              href="mailto:theamanamanaman@gmail.com"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 text-green-600 dark:text-green-400 hover:underline"
             >
               <Mail size={16} />
-              <span>bernaferrari2@gmail.com</span>
-            </a>
-            <a
-              href="https://github.com/bernaferrari/figmato-code/issues"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 text-green-600 dark:text-green-400 hover:underline"
-            >
-              <Github size={16} />
-              <span>Report an issue on GitHub</span>
+              <span>theamanamanaman@gmail.com</span>
             </a>
           </div>
         </div>
@@ -259,7 +245,7 @@ const About = ({
       {/* Footer */}
       <div className="mt-2 text-center text-neutral-500 dark:text-neutral-400 text-xs">
         <p>
-          © {new Date().getFullYear()} Bernardo Ferrari. All rights reserved.
+          © {new Date().getFullYear()} eppisai. All rights reserved.
         </p>
       </div>
     </div>

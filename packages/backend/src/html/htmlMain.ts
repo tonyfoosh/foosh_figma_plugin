@@ -22,10 +22,14 @@ import {
   scaleModeToBackgroundRepeat,
 } from "../common/images";
 import { addWarning } from "../common/commonConversionWarnings";
+import { FontCollector } from "./fontCollector";
 
 const selfClosingTags = ["img"];
 
 export let isPreviewGlobal = false;
+
+// Global font collector instance
+export let fontCollector = new FontCollector();
 
 let previousExecutionCache: { style: string; text: string }[];
 
@@ -257,6 +261,68 @@ export function getSvelteClassName(prefix?: string, nodeType?: string): string {
     .toLowerCase();
 }
 
+// Generate font imports as HTML link and style tags
+function generateFontImportsHTML(): string {
+  if (!fontCollector.hasFonts()) {
+    return "";
+  }
+
+  const { googleFontsUrl, customFontsCss, comment } =
+    fontCollector.generateFontCSS();
+
+  const parts: string[] = [];
+
+  // Add comment about fonts
+  if (comment) {
+    parts.push(`<!-- ${comment.replace(/\n/g, "\n     ")} -->`);
+  }
+
+  // Add Google Fonts link
+  if (googleFontsUrl) {
+    parts.push('<link rel="preconnect" href="https://fonts.googleapis.com">');
+    parts.push(
+      '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>',
+    );
+    parts.push(`<link href="${googleFontsUrl}" rel="stylesheet">`);
+  }
+
+  // Add custom fonts CSS
+  if (customFontsCss) {
+    parts.push(`<style>\n${customFontsCss}\n</style>`);
+  }
+
+  return parts.length > 0 ? parts.join("\n") + "\n\n" : "";
+}
+
+// Generate font imports for CSS (for Svelte <style> blocks)
+function generateFontImportsCSS(): string {
+  if (!fontCollector.hasFonts()) {
+    return "";
+  }
+
+  const { googleFontsUrl, customFontsCss, comment } =
+    fontCollector.generateFontCSS();
+
+  const parts: string[] = [];
+
+  // Add comment about fonts
+  if (comment) {
+    parts.push(`/* ${comment.replace(/\n/g, "\n   ")} */`);
+  }
+
+  // Add Google Fonts @import
+  if (googleFontsUrl) {
+    parts.push(`@import url('${googleFontsUrl}');`);
+  }
+
+  // Add custom fonts CSS
+  if (customFontsCss) {
+    parts.push(customFontsCss);
+  }
+
+  return parts.length > 0 ? parts.join("\n\n") + "\n\n" : "";
+}
+
 // Generate component code based on the specified mode
 function generateComponentCode(
   html: string,
@@ -268,8 +334,11 @@ function generateComponentCode(
       return generateReactComponent(html, sceneNode);
     case "svelte":
       return generateSvelteComponent(html);
-    case "html":
     case "jsx":
+      // For JSX mode, inject font imports at the beginning
+      const fontImportsHTML = generateFontImportsHTML();
+      return fontImportsHTML ? fontImportsHTML + html : html;
+    case "html":
     default:
       return html;
   }
@@ -289,12 +358,20 @@ function generateReactComponent(
     'import styled from "styled-components";',
   ];
 
+  // Generate font imports HTML for the component
+  const fontImportsHTML = generateFontImportsHTML();
+
+  // If there are font imports, add them to the JSX
+  const componentHTML = fontImportsHTML
+    ? `<>\n${indentString(fontImportsHTML.trim(), 6)}\n${indentString(html, 6)}\n    </>`
+    : html;
+
   return `${imports.join("\n")}
 ${styledComponentsCode ? `\n${styledComponentsCode}` : ""}
 
 export const ${componentName} = () => {
   return (
-${indentString(html, 4)}
+${indentString(componentHTML, 4)}
   );
 };`;
 }
@@ -313,10 +390,13 @@ function generateSvelteComponent(html: string): string {
     );
   });
 
+  // Generate font imports for CSS
+  const fontImports = generateFontImportsCSS();
+
   return `${html}
 
 <style>
-${cssRules.join("\n\n")}
+${fontImports}${cssRules.join("\n\n")}
 </style>`;
 }
 
@@ -329,6 +409,7 @@ export const htmlMain = async (
   previousExecutionCache = [];
   cssCollection = {};
   resetClassNameCounters(); // Reset counters for each new generation
+  fontCollector.clear(); // Reset font collector for each new generation
 
   let htmlContent = await htmlWidgetGenerator(sceneNode, settings);
 
@@ -351,9 +432,17 @@ export const htmlMain = async (
     if (mode === "svelte" && Object.keys(cssCollection).length > 0) {
       // CSS is already included in the Svelte component
     }
-  } else if (Object.keys(cssCollection).length > 0) {
+  } else {
+    // For plain HTML mode, inject font imports at the beginning
+    const fontImportsHTML = generateFontImportsHTML();
+    if (fontImportsHTML) {
+      output.html = fontImportsHTML + htmlContent;
+    }
+
     // For plain HTML with CSS, include CSS separately
-    output.css = getCollectedCSS();
+    if (Object.keys(cssCollection).length > 0) {
+      output.css = getCollectedCSS();
+    }
   }
 
   return output;
@@ -423,8 +512,19 @@ const convertNode = (settings: HTMLSettings) => async (node: SceneNode) => {
     case "LINE":
       return htmlLine(node, settings);
     case "VECTOR":
+      // Try to render vector as SVG, even if embedVectors is false
+      if ((node as any).canBeFlattened) {
+        const altNode = await renderAndAttachSVG(node);
+        if (altNode.svg) {
+          return htmlWrapSVG(altNode, settings);
+        }
+      }
+
+      // Fallback: render as container (preserves size, position, squircle corners if any)
       if (!settings.embedVectors && !isPreviewGlobal) {
-        addWarning("Vector is not supported");
+        addWarning(
+          `Vector "${node.name}" could not be rendered as SVG. Using rectangular fallback.`,
+        );
       }
       return await htmlContainer(
         { ...node, type: "RECTANGLE" } as any,
@@ -468,7 +568,9 @@ const htmlGroup = async (
   }
 
   // this needs to be called after CustomNode because widthHeight depends on it
-  const builder = new HtmlDefaultBuilder(node, settings).commonPositionStyles();
+  const builder = new HtmlDefaultBuilder(node, settings)
+    .commonPositionStyles()
+    .commonShapeStyles();
 
   if (builder.styles) {
     const attr = builder.build();

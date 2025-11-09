@@ -112,6 +112,7 @@ export interface BoundingRect {
 
 interface AllSides {
   all: number;
+  cornerSmoothing?: number;
 }
 interface Sides {
   left: number;
@@ -124,6 +125,7 @@ interface Corners {
   topRight: number;
   bottomRight: number;
   bottomLeft: number;
+  cornerSmoothing?: number;
 }
 interface HorizontalAndVertical {
   horizontal: number;

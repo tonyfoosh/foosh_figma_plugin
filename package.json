@@ -1,5 +1,5 @@
 {
-  "name": "figma-to-code",
+  "name": "foosh-figma-plugin",
   "private": true,
   "packageManager": "pnpm@9.14.4",
   "scripts": {
