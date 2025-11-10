@@ -2,7 +2,6 @@ import copy from "copy-to-clipboard";
 import Preview from "./components/Preview";
 import GradientsPanel from "./components/GradientsPanel";
 import ColorsPanel from "./components/ColorsPanel";
-import CodePanel from "./components/CodePanel";
 import About from "./components/About";
 import WarningsPanel from "./components/WarningsPanel";
 import {
@@ -13,13 +12,9 @@ import {
   SolidColorConversion,
   Warning,
 } from "types";
-import {
-  preferenceOptions,
-  selectPreferenceOptions,
-} from "./codegenPreferenceOptions";
 import Loading from "./components/Loading";
 import { useState } from "react";
-import { InfoIcon } from "lucide-react";
+import { InfoIcon, Copy, Check } from "lucide-react";
 import React from "react";
 
 type PluginUIProps = {
@@ -38,47 +33,9 @@ type PluginUIProps = {
   isLoading: boolean;
 };
 
-const frameworks: Framework[] = ["HTML", "Tailwind", "Flutter", "SwiftUI"];
-
-type FrameworkTabsProps = {
-  frameworks: Framework[];
-  selectedFramework: Framework;
-  setSelectedFramework: (framework: Framework) => void;
-  showAbout: boolean;
-  setShowAbout: (show: boolean) => void;
-};
-
-const FrameworkTabs = ({
-  frameworks,
-  selectedFramework,
-  setSelectedFramework,
-  showAbout,
-  setShowAbout,
-}: FrameworkTabsProps) => {
-  return (
-    <div className="grid grid-cols-4 sm:grid-cols-2 md:grid-cols-4 gap-1 grow">
-      {frameworks.map((tab) => (
-        <button
-          key={`tab ${tab}`}
-          className={`w-full text-sm rounded-md transition-colors font-medium ${
-            selectedFramework === tab && !showAbout
-              ? "bg-primary text-primary-foreground shadow-xs"
-              : "bg-muted hover:bg-primary/90 hover:text-primary-foreground"
-          }`}
-          onClick={() => {
-            setSelectedFramework(tab as Framework);
-            setShowAbout(false);
-          }}
-        >
-          {tab}
-        </button>
-      ))}
-    </div>
-  );
-};
-
 export const PluginUI = (props: PluginUIProps) => {
   const [showAbout, setShowAbout] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const [previewExpanded, setPreviewExpanded] = useState(false);
   const [previewViewMode, setPreviewViewMode] = useState<
@@ -93,17 +50,17 @@ export const PluginUI = (props: PluginUIProps) => {
   const isEmpty = props.code === "";
   const warnings = props.warnings ?? [];
 
+  const handleCopy = () => {
+    copy(props.code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
     <div className="flex flex-col h-full dark:text-white">
       <div className="p-2 dark:bg-card">
-        <div className="flex gap-1 bg-muted dark:bg-card rounded-lg p-1">
-          <FrameworkTabs
-            frameworks={frameworks}
-            selectedFramework={props.selectedFramework}
-            setSelectedFramework={props.setSelectedFramework}
-            showAbout={showAbout}
-            setShowAbout={setShowAbout}
-          />
+        <div className="flex gap-2 items-center justify-between bg-muted dark:bg-card rounded-lg p-2">
+          <h1 className="text-sm font-semibold px-2">Foosh Figma Plugin</h1>
           <button
             className={`w-8 h-8 flex items-center justify-center rounded-md text-sm font-medium ${
               showAbout
@@ -144,16 +101,26 @@ export const PluginUI = (props: PluginUIProps) => {
               />
             )}
 
-            {warnings.length > 0 && <WarningsPanel warnings={warnings} />}
+            {!isEmpty && (
+              <button
+                onClick={handleCopy}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium shadow-sm"
+              >
+                {copied ? (
+                  <>
+                    <Check size={18} />
+                    <span>Copied HTML/CSS!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy size={18} />
+                    <span>Copy HTML/CSS</span>
+                  </>
+                )}
+              </button>
+            )}
 
-            <CodePanel
-              code={props.code}
-              selectedFramework={props.selectedFramework}
-              preferenceOptions={preferenceOptions}
-              selectPreferenceOptions={selectPreferenceOptions}
-              settings={props.settings}
-              onPreferenceChanged={props.onPreferenceChanged}
-            />
+            {warnings.length > 0 && <WarningsPanel warnings={warnings} />}
 
             {props.colors.length > 0 && (
               <ColorsPanel

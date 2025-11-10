@@ -124,14 +124,14 @@ Found a bug? Have an idea for an improvement? Feel free to [add an issue](../../
 
 ## Author
 
-**eppisai** - theamanamanaman@gmail.com
+**Foosh** - tony@foosh.ai
 
 ## Attribution
 
 This plugin is based on [Figma to Code](https://github.com/bernaferrari/FigmaToCode) by Bernardo Ferrari.
 
 Original work: © Bernardo Ferrari
-Foosh modifications: © eppisai
+Foosh modifications: © Foosh
 
 ## License
 

@@ -31,7 +31,7 @@ export const defaultPluginSettings: PluginSettings = {
   useColorVariables: true,
   customTailwindPrefix: "",
   embedImages: false,
-  embedVectors: false,
+  embedVectors: true,
   htmlGenerationMode: "html",
   tailwindGenerationMode: "jsx",
   baseFontSize: 16,

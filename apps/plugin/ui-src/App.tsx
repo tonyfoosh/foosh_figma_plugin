@@ -118,16 +118,7 @@ export default function App() {
   }, []);
 
   const handleFrameworkChange = (updatedFramework: Framework) => {
-    if (updatedFramework !== state.selectedFramework) {
-      setState((prevState) => ({
-        ...prevState,
-        // code: "// Loading...",
-        selectedFramework: updatedFramework,
-      }));
-      postUISettingsChangingMessage("framework", updatedFramework, {
-        targetOrigin: "*",
-      });
-    }
+    // Framework is always HTML - no switching needed
   };
   const handlePreferencesChange = (
     key: keyof PluginSettings,

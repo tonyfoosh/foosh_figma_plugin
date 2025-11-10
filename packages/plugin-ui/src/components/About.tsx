@@ -59,14 +59,14 @@ const About = ({
         <h2 className="text-2xl font-bold mb-1">Foosh Figma Plugin</h2>
         <div className="flex items-center gap-1 text-neutral-600 dark:text-neutral-300">
           <span>Created by</span>
-          <span className="font-semibold">eppisai</span>
+          <span className="font-semibold">Foosh</span>
         </div>
         <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
           Extension for compositor node in foosh workflows
         </p>
         <div className="mt-3 flex gap-3">
           <a
-            href="mailto:theamanamanaman@gmail.com"
+            href="mailto:tony@foosh.ai"
             target="_blank"
             rel="noopener noreferrer"
             className="p-2 rounded-full bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-600 transition-colors"
@@ -180,13 +180,13 @@ const About = ({
           </p>
           <div className="space-y-2">
             <a
-              href="mailto:theamanamanaman@gmail.com"
+              href="mailto:tony@foosh.ai"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 text-green-600 dark:text-green-400 hover:underline"
             >
               <Mail size={16} />
-              <span>theamanamanaman@gmail.com</span>
+              <span>tony@foosh.ai</span>
             </a>
           </div>
         </div>
@@ -245,7 +245,7 @@ const About = ({
       {/* Footer */}
       <div className="mt-2 text-center text-neutral-500 dark:text-neutral-400 text-xs">
         <p>
-          © {new Date().getFullYear()} eppisai. All rights reserved.
+          © {new Date().getFullYear()} Foosh. All rights reserved.
         </p>
       </div>
     </div>
