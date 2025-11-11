@@ -13,6 +13,17 @@ export const getCommonPositionValue = (
       };
     }
 
+    // Check if the node has any rotation (including cumulative rotation from inlined GROUP parents)
+    const totalRotation = (node.rotation || 0) + (node.cumulativeRotation || 0);
+    if (totalRotation !== 0) {
+      // For rotated elements, use the bounding box position directly
+      // This ensures the element appears at its visual location after CSS transform is applied
+      return {
+        x: node.absoluteBoundingBox.x - node.parent.absoluteBoundingBox.x,
+        y: node.absoluteBoundingBox.y - node.parent.absoluteBoundingBox.y,
+      };
+    }
+
     return { x: node.x, y: node.y };
   }
 

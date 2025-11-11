@@ -734,26 +734,20 @@ const htmlContainer = async (
       const imageFill = getTopImageFill(node);
       const scaleMode = imageFill?.scaleMode || 'FILL';
 
-      if (
-        settings.embedImages &&
-        (settings as PluginSettings).framework === "HTML"
-      ) {
-        // For nodes with IMAGE fill and imageHash, extract the image directly
-        // to avoid exporting with white background
-        if (imageFill && imageFill.imageHash && !hasChildren) {
-          const directImage = await exportImageFromHash(imageFill.imageHash);
-          if (directImage) {
-            imgUrl = directImage;
-          } else {
-            // Fallback to exporting the node as PNG if direct image extraction fails
-            imgUrl = (await exportNodeAsBase64PNG(altNode, hasChildren)) ?? "";
-          }
+      // Always embed images as Base64 for HTML framework
+      // For nodes with IMAGE fill and imageHash, extract the image directly
+      // to avoid exporting with white background
+      if (imageFill && imageFill.imageHash && !hasChildren) {
+        const directImage = await exportImageFromHash(imageFill.imageHash);
+        if (directImage) {
+          imgUrl = directImage;
         } else {
-          // For nodes with children or without imageHash, export as PNG
+          // Fallback to exporting the node as PNG if direct image extraction fails
           imgUrl = (await exportNodeAsBase64PNG(altNode, hasChildren)) ?? "";
         }
       } else {
-        imgUrl = getPlaceholderImage(node.width, node.height);
+        // For nodes with children or without imageHash, export as PNG
+        imgUrl = (await exportNodeAsBase64PNG(altNode, hasChildren)) ?? "";
       }
 
       if (hasChildren) {
