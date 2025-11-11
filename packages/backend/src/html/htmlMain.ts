@@ -15,7 +15,6 @@ import { getVisibleNodes } from "../common/nodeVisibility";
 import {
   exportNodeAsBase64PNG,
   exportImageFromHash,
-  getPlaceholderImage,
   nodeHasImageFill,
   getTopImageFill,
   scaleModeToObjectFit,

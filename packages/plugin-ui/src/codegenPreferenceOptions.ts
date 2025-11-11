@@ -45,6 +45,15 @@ export const preferenceOptions: LocalCodegenPreferenceOptions[] = [
   },
   {
     itemType: "individual_select",
+    propertyName: "embedImages",
+    label: "Embed Images",
+    description:
+      "Convert Figma images to Base64 and embed them in the code. This may be slow. If there are too many images, it could freeze Figma.",
+    isDefault: true,
+    includedLanguages: ["HTML"],
+  },
+  {
+    itemType: "individual_select",
     propertyName: "embedVectors",
     label: "Embed Vectors",
     description:

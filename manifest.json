@@ -1,6 +1,6 @@
 {
   "name": "Foosh Figma Plugin",
-  "id": "842128343887142055",
+  "id": "1570042958525509356",
   "api": "1.0.0",
   "main": "apps/plugin/dist/code.js",
   "ui": "apps/plugin/dist/index.html",

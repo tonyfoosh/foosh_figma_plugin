@@ -13,17 +13,6 @@ export const getCommonPositionValue = (
       };
     }
 
-    // Check if the node has any rotation (including cumulative rotation from inlined GROUP parents)
-    const totalRotation = (node.rotation || 0) + (node.cumulativeRotation || 0);
-    if (totalRotation !== 0) {
-      // For rotated elements, use the bounding box position directly
-      // This ensures the element appears at its visual location after CSS transform is applied
-      return {
-        x: node.absoluteBoundingBox.x - node.parent.absoluteBoundingBox.x,
-        y: node.absoluteBoundingBox.y - node.parent.absoluteBoundingBox.y,
-      };
-    }
-
     return { x: node.x, y: node.y };
   }
 
@@ -59,7 +48,10 @@ export function calculateRectangleFromBoundingBox(
   boundingBox: BoundingBox,
   figmaRotationDegrees: number,
 ): RectangleStyle {
-  const cssRotationDegrees = -figmaRotationDegrees; // Direct CSS mapping
+  // Note: figmaRotationDegrees is actually already in CSS space (negated from Figma API)
+  // It's passed as -((jsonNode.rotation || 0) + (jsonNode.cumulativeRotation || 0))
+  // where jsonNode.rotation is already negated. So we use it directly.
+  const cssRotationDegrees = figmaRotationDegrees;
   const theta = (cssRotationDegrees * Math.PI) / 180;
   const cosTheta = Math.cos(theta);
   const sinTheta = Math.sin(theta);

@@ -9,7 +9,7 @@ import {
   Ruler,
   Monitor,
 } from "lucide-react";
-import { cn, replaceExternalImagesWithCanvas } from "../lib/utils";
+import { cn } from "../lib/utils";
 
 // Update the component props to receive state from parent
 const Preview: React.FC<{
@@ -184,7 +184,7 @@ const Preview: React.FC<{
                     transition: "all 0.3s ease",
                   }}
                   dangerouslySetInnerHTML={{
-                    __html: replaceExternalImagesWithCanvas(htmlPreview.content),
+                    __html: htmlPreview.content,
                   }}
                 />
               </div>

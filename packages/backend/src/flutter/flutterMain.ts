@@ -145,7 +145,7 @@ const flutterContainer = (node: SceneNode, child: string): string => {
   let propChild = "";
 
   if ("fills" in node && retrieveTopFill(node.fills)?.type === "IMAGE") {
-    addWarning("Image fills are replaced with placeholders");
+    addWarning("Image fills are not supported in Flutter mode and will be skipped");
   }
 
   if (child.length > 0) {

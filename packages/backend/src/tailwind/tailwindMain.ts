@@ -2,7 +2,6 @@ import { retrieveTopFill } from "../common/retrieveFill";
 import { indentString } from "../common/indentString";
 import { addWarning } from "../common/commonConversionWarnings";
 import { getVisibleNodes } from "../common/nodeVisibility";
-import { getPlaceholderImage } from "../common/images";
 import { TailwindTextBuilder } from "./tailwindTextBuilder";
 import { TailwindDefaultBuilder } from "./tailwindDefaultBuilder";
 import { tailwindAutoLayoutProps } from "./builderImpl/tailwindAutoLayout";
@@ -224,15 +223,9 @@ export const tailwindContainer = (
   const topFill = retrieveTopFill(node.fills);
 
   if (topFill?.type === "IMAGE") {
-    addWarning("Image fills are replaced with placeholders");
-    const imageURL = getPlaceholderImage(node.width, node.height);
-
-    if (!("children" in node) || node.children.length === 0) {
-      tag = "img";
-      src = ` src="${imageURL}"`;
-    } else {
-      builder.addAttributes(`bg-[url(${imageURL})]`);
-    }
+    // Image fills are not supported in Tailwind mode - images cannot be embedded
+    // The node will be rendered as a regular div without the image
+    addWarning("Image fills are not supported in Tailwind mode and will be skipped");
   }
 
   // Generate appropriate HTML

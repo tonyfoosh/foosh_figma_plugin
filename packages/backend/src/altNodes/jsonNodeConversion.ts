@@ -453,36 +453,25 @@ const processNodePair = async (
   // Always copy size and position
   if ("absoluteBoundingBox" in jsonNode && jsonNode.absoluteBoundingBox) {
     if (jsonNode.parent) {
-      const totalRotation = (jsonNode.rotation || 0) + (jsonNode.cumulativeRotation || 0);
+      // Extract width and height from bounding box and rotation. This is necessary because Figma JSON API doesn't have width and height.
+      const rect = calculateRectangleFromBoundingBox(
+        {
+          width: jsonNode.absoluteBoundingBox.width,
+          height: jsonNode.absoluteBoundingBox.height,
+          x:
+            jsonNode.absoluteBoundingBox.x -
+            (jsonNode.parent?.absoluteBoundingBox.x || 0),
+          y:
+            jsonNode.absoluteBoundingBox.y -
+            (jsonNode.parent?.absoluteBoundingBox.y || 0),
+        },
+        -((jsonNode.rotation || 0) + (jsonNode.cumulativeRotation || 0)),
+      );
 
-      // For rotated elements, use the bounding box directly instead of calculating pre-rotation dimensions
-      // This matches how CSS transforms work: position first, then rotate
-      if (totalRotation !== 0) {
-        jsonNode.width = jsonNode.absoluteBoundingBox.width;
-        jsonNode.height = jsonNode.absoluteBoundingBox.height;
-        jsonNode.x = jsonNode.absoluteBoundingBox.x - (jsonNode.parent?.absoluteBoundingBox.x || 0);
-        jsonNode.y = jsonNode.absoluteBoundingBox.y - (jsonNode.parent?.absoluteBoundingBox.y || 0);
-      } else {
-        // Extract width and height from bounding box and rotation. This is necessary because Figma JSON API doesn't have width and height.
-        const rect = calculateRectangleFromBoundingBox(
-          {
-            width: jsonNode.absoluteBoundingBox.width,
-            height: jsonNode.absoluteBoundingBox.height,
-            x:
-              jsonNode.absoluteBoundingBox.x -
-              (jsonNode.parent?.absoluteBoundingBox.x || 0),
-            y:
-              jsonNode.absoluteBoundingBox.y -
-              (jsonNode.parent?.absoluteBoundingBox.y || 0),
-          },
-          -((jsonNode.rotation || 0) + (jsonNode.cumulativeRotation || 0)),
-        );
-
-        jsonNode.width = rect.width;
-        jsonNode.height = rect.height;
-        jsonNode.x = rect.left;
-        jsonNode.y = rect.top;
-      }
+      jsonNode.width = rect.width;
+      jsonNode.height = rect.height;
+      jsonNode.x = rect.left;
+      jsonNode.y = rect.top;
     } else {
       jsonNode.width = jsonNode.absoluteBoundingBox.width;
       jsonNode.height = jsonNode.absoluteBoundingBox.height;

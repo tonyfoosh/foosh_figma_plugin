@@ -6,7 +6,6 @@ import {
   numberToFixedString,
 } from "../../common/numToAutoFixed";
 import { retrieveTopFill } from "../../common/retrieveFill";
-import { getPlaceholderImage } from "../../common/images";
 import { GradientPaint, ImagePaint, Paint } from "../../api_types";
 
 /**
@@ -82,18 +81,12 @@ export const flutterBoxDecorationColor = (
   ) {
     return { gradient: flutterGradient(fill) };
   } else if (fill?.type === "IMAGE") {
-    return { image: flutterDecorationImage(node, fill) };
+    // Image fills are not supported in Flutter mode
+    addWarning("Image fills are not supported in Flutter mode and will be skipped");
+    return {};
   }
 
   return {};
-};
-
-export const flutterDecorationImage = (node: SceneNode, fill: ImagePaint) => {
-  addWarning("Image fills are replaced with placeholders");
-  return generateWidgetCode("DecorationImage", {
-    image: `NetworkImage("${getPlaceholderImage(node.width, node.height)}")`,
-    fit: fitToBoxFit(fill),
-  });
 };
 
 const fitToBoxFit = (fill: ImagePaint): string => {
