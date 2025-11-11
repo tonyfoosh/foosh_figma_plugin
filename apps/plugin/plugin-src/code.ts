@@ -7,6 +7,7 @@ import {
   htmlMain,
   composeMain,
   postSettingsChanged,
+  getCachedConversionMessage,
 } from "backend";
 import { nodesToJSON } from "backend/src/altNodes/jsonNodeConversion";
 import { retrieveGenericSolidUIColors } from "backend/src/common/retrieveUI/retrieveColors";
@@ -30,7 +31,7 @@ export const defaultPluginSettings: PluginSettings = {
   roundTailwindColors: true,
   useColorVariables: true,
   customTailwindPrefix: "",
-  embedImages: false,
+  embedImages: true,
   embedVectors: true,
   htmlGenerationMode: "html",
   tailwindGenerationMode: "jsx",
@@ -91,31 +92,6 @@ const safeRun = async (settings: PluginSettings) => {
     "selection =",
     figma.currentPage.selection,
   );
-
-  // Filter selection: If a Frame with a single child is selected,
-  // check if the user likely intended to select the child instead
-  let rawSelection = figma.currentPage.selection;
-  if (rawSelection.length === 1) {
-    const selectedNode = rawSelection[0];
-    console.log("[DEBUG] safeRun - Single node selected:", {
-      type: selectedNode.type,
-      name: selectedNode.name,
-      hasChildren: "children" in selectedNode ? selectedNode.children.length : 0
-    });
-
-    // If it's a Frame/Group with exactly one child, use the child instead
-    if ((selectedNode.type === "FRAME" || selectedNode.type === "GROUP") &&
-        "children" in selectedNode &&
-        selectedNode.children.length === 1) {
-      const child = selectedNode.children[0];
-      console.log("[DEBUG] safeRun - Frame/Group has single child, using child instead:", {
-        childType: child.type,
-        childName: child.name
-      });
-      // Override the selection to use the child
-      figma.currentPage.selection = [child];
-    }
-  }
 
   if (isLoading === false) {
     try {
@@ -184,7 +160,17 @@ const standardMode = async () => {
   figma.ui.onmessage = async (msg) => {
     console.log("[DEBUG] figma.ui.onmessage", msg);
 
-    if (msg.type === "pluginSettingWillChange") {
+    if (msg.type === "ui-ready") {
+      console.log("[DEBUG] UI is ready! Checking for cached conversion");
+      const cachedMessage = getCachedConversionMessage();
+      if (cachedMessage) {
+        console.log("[DEBUG] Resending cached conversion message to UI");
+        figma.ui.postMessage(cachedMessage);
+      } else {
+        console.log("[DEBUG] No cached conversion, running safeRun");
+        safeRun(userPluginSettings);
+      }
+    } else if (msg.type === "pluginSettingWillChange") {
       const { key, value } = msg as SettingWillChangeMessage<unknown>;
       console.log(`[DEBUG] Setting changed: ${key} = ${value}`);
       (userPluginSettings as any)[key] = value;

@@ -46,6 +46,10 @@ export default function App() {
     .trim();
 
   useEffect(() => {
+    // Tell the backend that the UI is ready
+    console.log("[ui] Sending ui-ready message to backend");
+    parent.postMessage({ pluginMessage: { type: "ui-ready" } }, "*");
+
     window.onmessage = (event: MessageEvent) => {
       const untypedMessage = event.data.pluginMessage as Message;
       console.log("[ui] message received:", untypedMessage);
@@ -61,12 +65,32 @@ export default function App() {
 
         case "code":
           const conversionMessage = untypedMessage as ConversionMessage;
-          setState((prevState) => ({
-            ...prevState,
-            ...conversionMessage,
-            selectedFramework: conversionMessage.settings.framework,
-            isLoading: false,
-          }));
+          console.log("[ui] Received 'code' message:", {
+            codeLength: conversionMessage.code?.length || 0,
+            hasHtmlPreview: !!conversionMessage.htmlPreview,
+            htmlPreviewLength: conversionMessage.htmlPreview?.content?.length || 0,
+            colorsCount: conversionMessage.colors?.length || 0,
+            gradientsCount: conversionMessage.gradients?.length || 0,
+            warningsCount: conversionMessage.warnings?.length || 0,
+            framework: conversionMessage.settings?.framework
+          });
+          setState((prevState) => {
+            const newState = {
+              ...prevState,
+              ...conversionMessage,
+              selectedFramework: conversionMessage.settings.framework,
+              isLoading: false,
+            };
+            console.log("[ui] State updated after 'code' message:", {
+              codeLength: newState.code?.length || 0,
+              hasHtmlPreview: !!newState.htmlPreview,
+              colorsCount: newState.colors?.length || 0,
+              gradientsCount: newState.gradients?.length || 0,
+              warningsCount: newState.warnings?.length || 0,
+              isLoading: newState.isLoading
+            });
+            return newState;
+          });
           break;
 
         case "pluginSettingChanged":
@@ -106,8 +130,10 @@ export default function App() {
         case "selection-json":
           const json = event.data.pluginMessage.data;
           copy(JSON.stringify(json, null, 2));
+          break;
 
         default:
+          console.log("[ui] Unhandled message type:", untypedMessage.type);
           break;
       }
     };

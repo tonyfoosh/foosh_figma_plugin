@@ -446,18 +446,6 @@ export const htmlMain = async (
     }
   }
 
-  // Log generated HTML for debugging
-  console.log("[DEBUG] Generated HTML output:", {
-    htmlLength: output.html.length,
-    hasCss: !!output.css,
-    cssLength: output.css ? output.css.length : 0,
-    mode: settings.htmlGenerationMode || "html"
-  });
-  console.log("[DEBUG] Full HTML code:\n", output.html);
-  if (output.css) {
-    console.log("[DEBUG] Full CSS code:\n", output.css);
-  }
-
   return output;
 };
 
@@ -465,17 +453,6 @@ export const generateHTMLPreview = async (
   nodes: SceneNode[],
   settings: PluginSettings,
 ): Promise<HTMLPreview> => {
-  console.log("[DEBUG] generateHTMLPreview input nodes:", {
-    count: nodes.length,
-    nodes: nodes.map((node: any) => ({
-      name: node.name,
-      type: node.type,
-      width: node.width,
-      height: node.height,
-      hasChildren: node.children ? node.children.length : 0
-    }))
-  });
-
   let result = await htmlMain(
     nodes,
     {
@@ -493,8 +470,6 @@ export const generateHTMLPreview = async (
     width: Math.max(...nodes.map((node) => node.width)),
     height: nodes.reduce((sum, node) => sum + node.height, 0),
   };
-
-  console.log("[DEBUG] generateHTMLPreview output size:", previewSize);
 
   return {
     size: previewSize,
@@ -779,7 +754,6 @@ const htmlContainer = async (
         }
       } else {
         imgUrl = getPlaceholderImage(node.width, node.height);
-        console.log("imgUrl", imgUrl);
       }
 
       if (hasChildren) {

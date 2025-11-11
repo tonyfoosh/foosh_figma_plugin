@@ -45,10 +45,36 @@ export const PluginUI = (props: PluginUIProps) => {
     "white",
   );
 
+  // Debug logging for props received
+  console.log("[PluginUI] Component render with props:", {
+    isLoading: props.isLoading,
+    codeLength: props.code?.length || 0,
+    codeEmpty: props.code === "",
+    hasHtmlPreview: !!props.htmlPreview,
+    htmlPreviewContent: props.htmlPreview?.content?.length || 0,
+    htmlPreviewSize: props.htmlPreview?.size,
+    colorsCount: props.colors?.length || 0,
+    gradientsCount: props.gradients?.length || 0,
+    warningsCount: props.warnings?.length || 0,
+    hasSettings: !!props.settings,
+    framework: props.selectedFramework
+  });
+
   if (props.isLoading) return <Loading />;
 
   const isEmpty = props.code === "";
   const warnings = props.warnings ?? [];
+
+  // Debug logging for conditional rendering decisions
+  console.log("[PluginUI] Rendering decisions:", {
+    isEmpty,
+    showAbout,
+    willShowPreview: isEmpty === false && !!props.htmlPreview,
+    willShowCopyButton: !isEmpty,
+    willShowWarnings: warnings.length > 0,
+    willShowColors: props.colors.length > 0,
+    willShowGradients: props.gradients.length > 0
+  });
 
   const handleCopy = () => {
     copy(props.code);
@@ -139,6 +165,29 @@ export const PluginUI = (props: PluginUIProps) => {
                 }}
               />
             )}
+
+            {/* Fallback UI when nothing is displayed */}
+            {isEmpty &&
+              props.colors.length === 0 &&
+              props.gradients.length === 0 &&
+              warnings.length === 0 && (
+                <div className="flex flex-col items-center justify-center p-8 text-center">
+                  <div className="text-muted-foreground text-sm space-y-2">
+                    <p className="font-medium">No content to display</p>
+                    <p className="text-xs">
+                      Select a frame in Figma to generate HTML/CSS
+                    </p>
+                    <div className="mt-4 p-3 bg-muted rounded-lg text-left text-xs">
+                      <p className="font-semibold mb-1">Debug Info:</p>
+                      <p>Code: {props.code === "" ? "empty" : "present"}</p>
+                      <p>Preview: {props.htmlPreview?.content ? "present" : "empty"}</p>
+                      <p>Colors: {props.colors.length}</p>
+                      <p>Gradients: {props.gradients.length}</p>
+                      <p>Warnings: {warnings.length}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
           </div>
         )}
       </div>

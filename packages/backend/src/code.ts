@@ -152,6 +152,18 @@ export const run = async (settings: PluginSettings) => {
     }ms)`,
   );
 
+  // Debug logging before sending message to UI
+  console.log("[DEBUG] About to send conversion data to UI:", {
+    codeLength: code.length,
+    codePreview: code.substring(0, 100) + "...",
+    hasHtmlPreview: !!htmlPreview,
+    htmlPreviewLength: htmlPreview?.length || 0,
+    colorsCount: colors.length,
+    gradientsCount: gradients.length,
+    warningsCount: warnings.length,
+    framework: settings.framework
+  });
+
   postConversionComplete({
     code,
     htmlPreview,
