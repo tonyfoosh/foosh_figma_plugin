@@ -3,6 +3,8 @@
  * Tracks fonts used in the design and generates appropriate imports
  */
 
+import { getFontDataUri } from './fontEmbeds';
+
 interface FontInfo {
   family: string;
   weights: Set<number>;
@@ -125,6 +127,8 @@ export class FontCollector {
 
   /**
    * Generate @font-face rules for custom fonts
+   * Uses base64 embedded fonts for Figma CSP compliance
+   * Falls back to S3 URLs for production environments if base64 is not available
    */
   private generateCustomFontFaces(customFonts: FontInfo[]): string {
     if (customFonts.length === 0) return "";
@@ -132,16 +136,32 @@ export class FontCollector {
     const fontFaces = customFonts.flatMap((font) => {
       const weights = Array.from(font.weights).sort((a, b) => a - b);
       return weights.map((weight) => {
-        const weightName = this.getWeightName(weight);
-        const fileName = `${font.family.replace(/ /g, "")}-${weightName}`;
+        // Try to get base64 data URI first (for Figma plugin CSP compliance)
+        const dataUri = getFontDataUri(font.family, weight);
 
-        return `@font-face {
+        if (dataUri) {
+          // Use base64 embedded font (works in Figma plugin, frontend, and Playwright)
+          return `@font-face {
   font-family: '${font.family}';
-  src: url('./fonts/${fileName}.woff2') format('woff2');
+  src: url('${dataUri}') format('woff2');
   font-weight: ${weight};
   font-style: normal;
-  /* TODO: Add ${fileName}.woff2 to ./fonts/ directory */
+  font-display: swap;
 }`;
+        } else {
+          // Fallback to S3 URL if base64 not available
+          const FONT_BASE_URL = "https://async-workflow-outputs.s3.amazonaws.com/fonts";
+          const weightName = this.getWeightName(weight);
+          const fileName = `${font.family.replace(/ /g, "")}-${weightName}`;
+
+          return `@font-face {
+  font-family: '${font.family}';
+  src: url('${FONT_BASE_URL}/${fileName}.woff2') format('woff2');
+  font-weight: ${weight};
+  font-style: normal;
+  font-display: swap;
+}`;
+        }
       });
     });
 
@@ -235,7 +255,7 @@ export class FontCollector {
     }
 
     if (customFonts.length > 0) {
-      lines.push("Custom Fonts (add font files to ./fonts/ directory):");
+      lines.push("Custom Fonts (embedded as base64 for Figma CSP compliance):");
       customFonts.forEach((font) => {
         const weights = Array.from(font.weights).sort((a, b) => a - b);
         lines.push(`  - ${font.family} (weights: ${weights.join(", ")})`);

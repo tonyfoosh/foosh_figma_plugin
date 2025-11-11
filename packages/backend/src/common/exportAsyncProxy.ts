@@ -21,7 +21,14 @@ export const exportAsyncProxy = async <
     await new Promise((resolve) => setTimeout(resolve, 30));
   }
 
-  const figmaNode = (await figma.getNodeByIdAsync(node.id)) as ExportMixin;
+  const figmaNode = (await figma.getNodeByIdAsync(node.id)) as ExportMixin | null;
+
+  if (!figmaNode) {
+    console.error(`Failed to get node by ID: ${node.id}`);
+    throw new TypeError(
+      `Node with ID ${node.id} not found. The node may have been deleted or is not accessible.`,
+    );
+  }
   // console.log("getting figma id for", figmaNode);
 
   if (figmaNode.exportAsync === undefined) {

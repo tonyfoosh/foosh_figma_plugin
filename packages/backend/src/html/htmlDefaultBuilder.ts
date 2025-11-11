@@ -265,6 +265,13 @@ export class HtmlDefaultBuilder {
         formatWithJSX("top", isJSX, y),
         formatWithJSX("position", isJSX, "absolute"),
       );
+
+      // Add z-index for absolutely positioned elements to maintain layer order
+      // The __childIndex is set in htmlWidgetGenerator during processing
+      const childIndex = (node as any).__childIndex;
+      if (childIndex !== undefined) {
+        this.addStyles(formatWithJSX("z-index", isJSX, childIndex));
+      }
     } else {
       if (node.type === "GROUP" || (node as any).isRelative) {
         this.addStyles(formatWithJSX("position", isJSX, "relative"));

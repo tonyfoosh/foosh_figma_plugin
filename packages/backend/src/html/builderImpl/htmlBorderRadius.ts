@@ -8,6 +8,53 @@ import {
 export const htmlBorderRadius = (node: SceneNode, isJsx: boolean): string[] => {
   let comp: string[] = [];
 
+  // Check if this node has a mask child (first child with isMask: true)
+  // Masks in Figma are used to clip content to a specific shape.
+  // The mask node itself is hidden from rendering (filtered out in htmlWidgetGenerator),
+  // and only its shape is used to clip the parent container and its children.
+  if ("children" in node && node.children.length > 0) {
+    const firstChild = node.children[0];
+    if ("isMask" in firstChild && firstChild.isMask === true) {
+      // Apply clipping based on mask shape
+      if (firstChild.type === "ELLIPSE") {
+        // For ellipse masks, calculate the actual position and radii
+        // based on the mask's bounds relative to the parent node
+        const maskWidth = "width" in firstChild ? (firstChild.width as number) : 0;
+        const maskHeight = "height" in firstChild ? (firstChild.height as number) : 0;
+        const maskX = "x" in firstChild ? (firstChild.x as number) : 0;
+        const maskY = "y" in firstChild ? (firstChild.y as number) : 0;
+
+        const parentWidth = "width" in node ? (node.width as number) : 1;
+        const parentHeight = "height" in node ? (node.height as number) : 1;
+
+        // Calculate ellipse center as percentage of parent dimensions
+        const centerX = ((maskX + maskWidth / 2) / parentWidth) * 100;
+        const centerY = ((maskY + maskHeight / 2) / parentHeight) * 100;
+
+        // Calculate ellipse radii as percentage of parent dimensions
+        const radiusX = ((maskWidth / 2) / parentWidth) * 100;
+        const radiusY = ((maskHeight / 2) / parentHeight) * 100;
+
+        // Generate clip-path with calculated values
+        // Format: ellipse(radiusX radiusY at centerX centerY)
+        const clipPathValue = `ellipse(${radiusX.toFixed(2)}% ${radiusY.toFixed(2)}% at ${centerX.toFixed(2)}% ${centerY.toFixed(2)}%)`;
+
+        // This clips the element's border-box, including background-image on children
+        // Note: clip-path is well-supported in modern browsers (Chrome 55+, Safari 9.1+, Firefox 54+)
+        comp.push(formatWithJSX("clip-path", isJsx, clipPathValue));
+      }
+      // TODO: Add support for other mask types (RECTANGLE with rounded corners, VECTOR paths)
+      // For RECTANGLE masks, we could use clip-path: inset() with border-radius
+      // For VECTOR masks, we could use clip-path: path() with the SVG path data
+
+      // Always add overflow: hidden for masks as a fallback for older browsers
+      comp.push(formatWithJSX("overflow", isJsx, "hidden"));
+
+      // Note: We still need to process the rest of the node's border-radius
+      // so we don't return here, we continue to the clipsContent check
+    }
+  }
+
   if (
     "children" in node &&
     node.children.length > 0 &&
@@ -19,6 +66,7 @@ export const htmlBorderRadius = (node: SceneNode, isJsx: boolean): string[] => {
 
   if (node.type === "ELLIPSE") {
     comp.push(formatWithJSX("border-radius", isJsx, 9999));
+    comp.push(formatWithJSX("overflow", isJsx, "hidden"));
     return comp;
   }
 

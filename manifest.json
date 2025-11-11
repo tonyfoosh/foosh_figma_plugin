@@ -9,7 +9,7 @@
   "permissions": [],
   "documentAccess": "dynamic-page",
   "networkAccess": {
-    "allowedDomains": ["none"]
+    "allowedDomains": ["https://async-workflow-outputs.s3.amazonaws.com"]
   },
   "codegenLanguages": [
     { "label": "HTML", "value": "html" }

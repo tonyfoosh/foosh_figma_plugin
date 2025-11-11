@@ -30,6 +30,18 @@ export const run = async (settings: PluginSettings) => {
   const { framework, useOldPluginVersion2025 } = settings;
   const selection = figma.currentPage.selection;
 
+  console.log("[DEBUG] Selection info:", {
+    count: selection.length,
+    nodes: selection.map(node => ({
+      name: node.name,
+      type: node.type,
+      id: node.id,
+      width: node.width,
+      height: node.height,
+      parent: node.parent?.name
+    }))
+  });
+
   if (selection.length === 0) {
     postEmptyMessage();
     return;
@@ -64,6 +76,33 @@ export const run = async (settings: PluginSettings) => {
   }
 
   console.log("[debug] convertedSelection", { ...convertedSelection[0] });
+  console.log("[DEBUG] Converted selection details:", {
+    count: convertedSelection.length,
+    nodes: convertedSelection.map((node: any) => ({
+      name: node.name,
+      type: node.type,
+      width: node.width,
+      height: node.height,
+      hasChildren: node.children ? node.children.length : 0
+    }))
+  });
+
+  // Log full JSON structure without parent refs for debugging
+  const removeParentRecursive = (obj: any): any => {
+    if (Array.isArray(obj)) {
+      return obj.map(removeParentRecursive);
+    }
+    if (obj && typeof obj === 'object') {
+      const newObj = { ...obj };
+      delete newObj.parent;
+      for (const key in newObj) {
+        newObj[key] = removeParentRecursive(newObj[key]);
+      }
+      return newObj;
+    }
+    return obj;
+  };
+  console.log("[DEBUG] Full Figma JSON (without parent refs):", JSON.stringify(removeParentRecursive(convertedSelection), null, 2));
 
   // ignore when nothing was selected
   // If the selection was empty, the converted selection will also be empty.

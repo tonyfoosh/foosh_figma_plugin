@@ -14,6 +14,7 @@ import { renderAndAttachSVG } from "../altNodes/altNodeUtils";
 import { getVisibleNodes } from "../common/nodeVisibility";
 import {
   exportNodeAsBase64PNG,
+  exportImageFromHash,
   getPlaceholderImage,
   nodeHasImageFill,
   getTopImageFill,
@@ -445,6 +446,18 @@ export const htmlMain = async (
     }
   }
 
+  // Log generated HTML for debugging
+  console.log("[DEBUG] Generated HTML output:", {
+    htmlLength: output.html.length,
+    hasCss: !!output.css,
+    cssLength: output.css ? output.css.length : 0,
+    mode: settings.htmlGenerationMode || "html"
+  });
+  console.log("[DEBUG] Full HTML code:\n", output.html);
+  if (output.css) {
+    console.log("[DEBUG] Full CSS code:\n", output.css);
+  }
+
   return output;
 };
 
@@ -452,6 +465,17 @@ export const generateHTMLPreview = async (
   nodes: SceneNode[],
   settings: PluginSettings,
 ): Promise<HTMLPreview> => {
+  console.log("[DEBUG] generateHTMLPreview input nodes:", {
+    count: nodes.length,
+    nodes: nodes.map((node: any) => ({
+      name: node.name,
+      type: node.type,
+      width: node.width,
+      height: node.height,
+      hasChildren: node.children ? node.children.length : 0
+    }))
+  });
+
   let result = await htmlMain(
     nodes,
     {
@@ -465,11 +489,15 @@ export const generateHTMLPreview = async (
     result.html = `<div style="width: 100%; height: 100%">${result.html}</div>`;
   }
 
+  const previewSize = {
+    width: Math.max(...nodes.map((node) => node.width)),
+    height: nodes.reduce((sum, node) => sum + node.height, 0),
+  };
+
+  console.log("[DEBUG] generateHTMLPreview output size:", previewSize);
+
   return {
-    size: {
-      width: Math.max(...nodes.map((node) => node.width)),
-      height: nodes.reduce((sum, node) => sum + node.height, 0),
-    },
+    size: previewSize,
     content: result.html,
   };
 };
@@ -478,10 +506,20 @@ const htmlWidgetGenerator = async (
   sceneNode: ReadonlyArray<SceneNode>,
   settings: HTMLSettings,
 ): Promise<string> => {
-  // filter non visible nodes. This is necessary at this step because conversion already happened.
-  const promiseOfConvertedCode = getVisibleNodes(sceneNode).map(
-    convertNode(settings),
-  );
+  // filter non visible nodes and mask nodes. Mask nodes are used for clipping but shouldn't be rendered.
+  const visibleNodes = getVisibleNodes(sceneNode);
+  const renderableNodes = visibleNodes.filter((node) => {
+    // Filter out nodes with isMask: true - these are used for clipping but shouldn't render
+    return !("isMask" in node && (node as any).isMask === true);
+  });
+
+  // Add child index as metadata for z-index calculation
+  const nodesWithIndex = renderableNodes.map((node, index) => {
+    (node as any).__childIndex = index;
+    return node;
+  });
+
+  const promiseOfConvertedCode = nodesWithIndex.map(convertNode(settings));
   const code = (await Promise.all(promiseOfConvertedCode)).join("");
   return code;
 };
@@ -725,7 +763,20 @@ const htmlContainer = async (
         settings.embedImages &&
         (settings as PluginSettings).framework === "HTML"
       ) {
-        imgUrl = (await exportNodeAsBase64PNG(altNode, hasChildren)) ?? "";
+        // For nodes with IMAGE fill and imageHash, extract the image directly
+        // to avoid exporting with white background
+        if (imageFill && imageFill.imageHash && !hasChildren) {
+          const directImage = await exportImageFromHash(imageFill.imageHash);
+          if (directImage) {
+            imgUrl = directImage;
+          } else {
+            // Fallback to exporting the node as PNG if direct image extraction fails
+            imgUrl = (await exportNodeAsBase64PNG(altNode, hasChildren)) ?? "";
+          }
+        } else {
+          // For nodes with children or without imageHash, export as PNG
+          imgUrl = (await exportNodeAsBase64PNG(altNode, hasChildren)) ?? "";
+        }
       } else {
         imgUrl = getPlaceholderImage(node.width, node.height);
         console.log("imgUrl", imgUrl);
@@ -742,24 +793,76 @@ const htmlContainer = async (
         );
 
         // Add background-size based on scaleMode
+        // For TILE mode with scalingFactor, use the scaled size instead of auto
+        let backgroundSize = scaleModeToBackgroundSize(scaleMode);
+        if (scaleMode === 'TILE' && imageFill?.scalingFactor) {
+          // scalingFactor is a multiplier (e.g., 0.5 means 50% of original size)
+          const scalePercent = imageFill.scalingFactor * 100;
+          backgroundSize = `${scalePercent}%`;
+        }
         builder.addStyles(
           formatWithJSX(
             "background-size",
             settings.htmlGenerationMode === "jsx",
-            scaleModeToBackgroundSize(scaleMode),
+            backgroundSize,
           ),
         );
 
-        // Add background-repeat for TILE mode
-        const backgroundRepeat = scaleModeToBackgroundRepeat(scaleMode);
-        if (backgroundRepeat) {
+        // Add background-position to center images (matching Figma's default behavior)
+        // For FIT and FILL modes, Figma centers the image within the bounds
+        if (scaleMode === 'FIT' || scaleMode === 'FILL') {
           builder.addStyles(
             formatWithJSX(
-              "background-repeat",
+              "background-position",
               settings.htmlGenerationMode === "jsx",
-              backgroundRepeat,
+              "center center",
             ),
           );
+        }
+
+        // Add background-origin for consistent rendering
+        builder.addStyles(
+          formatWithJSX(
+            "background-origin",
+            settings.htmlGenerationMode === "jsx",
+            "border-box",
+          ),
+        );
+
+        // Add background-repeat (repeat for TILE, no-repeat for others)
+        builder.addStyles(
+          formatWithJSX(
+            "background-repeat",
+            settings.htmlGenerationMode === "jsx",
+            scaleModeToBackgroundRepeat(scaleMode),
+          ),
+        );
+
+        // Handle imageTransform and rotation for images
+        // The imageTransform is a 2x3 matrix [[a, b, c], [d, e, f]] (only for STRETCH mode)
+        // which maps to CSS matrix(a, d, b, e, c, f)
+        // The rotation is in degrees and needs to be converted to CSS rotate()
+        if (imageFill) {
+          const transforms: string[] = [];
+
+          if (imageFill.imageTransform) {
+            const [[a, b, c], [d, e, f]] = imageFill.imageTransform;
+            transforms.push(`matrix(${a}, ${d}, ${b}, ${e}, ${c}, ${f})`);
+          }
+
+          if (imageFill.rotation) {
+            transforms.push(`rotate(${imageFill.rotation}deg)`);
+          }
+
+          if (transforms.length > 0) {
+            builder.addStyles(
+              formatWithJSX(
+                "transform",
+                settings.htmlGenerationMode === "jsx",
+                transforms.join(" "),
+              ),
+            );
+          }
         }
       } else {
         // <img> tag approach for image-only nodes

@@ -83,14 +83,14 @@ export const getTopImageFill = (node: MinimalFillsMixin): ImagePaint | null => {
  * Convert Figma's scaleMode to CSS object-fit property
  * Used for <img> tags
  */
-export const scaleModeToObjectFit = (scaleMode: 'FILL' | 'FIT' | 'TILE' | 'STRETCH'): string => {
+export const scaleModeToObjectFit = (scaleMode: 'FILL' | 'FIT' | 'TILE' | 'CROP'): string => {
   switch (scaleMode) {
     case 'FIT':
       return 'contain';  // FIT maintains aspect ratio and fits within bounds
     case 'FILL':
       return 'cover';    // FILL covers entire area, may crop
-    case 'STRETCH':
-      return 'fill';     // STRETCH distorts to fill area
+    case 'CROP':
+      return 'cover';    // CROP is similar to FILL, covers entire area
     case 'TILE':
       return 'none';     // TILE repeats the image
     default:
@@ -102,14 +102,14 @@ export const scaleModeToObjectFit = (scaleMode: 'FILL' | 'FIT' | 'TILE' | 'STRET
  * Convert Figma's scaleMode to CSS background-size property
  * Used for background-image on divs
  */
-export const scaleModeToBackgroundSize = (scaleMode: 'FILL' | 'FIT' | 'TILE' | 'STRETCH'): string => {
+export const scaleModeToBackgroundSize = (scaleMode: 'FILL' | 'FIT' | 'TILE' | 'CROP'): string => {
   switch (scaleMode) {
     case 'FIT':
       return 'contain';    // FIT maintains aspect ratio and fits within bounds
     case 'FILL':
       return 'cover';      // FILL covers entire area, may crop
-    case 'STRETCH':
-      return '100% 100%';  // STRETCH distorts to fill area
+    case 'CROP':
+      return 'cover';      // CROP behaves like FILL for background-size
     case 'TILE':
       return 'auto';       // TILE uses original size for repeating
     default:
@@ -120,8 +120,8 @@ export const scaleModeToBackgroundSize = (scaleMode: 'FILL' | 'FIT' | 'TILE' | '
 /**
  * Get background-repeat value based on scaleMode
  */
-export const scaleModeToBackgroundRepeat = (scaleMode: 'FILL' | 'FIT' | 'TILE' | 'STRETCH'): string | null => {
-  return scaleMode === 'TILE' ? 'repeat' : null;
+export const scaleModeToBackgroundRepeat = (scaleMode: 'FILL' | 'FIT' | 'TILE' | 'CROP'): string => {
+  return scaleMode === 'TILE' ? 'repeat' : 'no-repeat';
 };
 
 const imageBytesToBase64 = (bytes: Uint8Array): string => {
@@ -134,6 +134,34 @@ const imageBytesToBase64 = (bytes: Uint8Array): string => {
   const b64 = btoa(binaryString);
 
   return `data:image/png;base64,${b64}`;
+};
+
+/**
+ * Export an image directly from its imageRef hash (for IMAGE fills)
+ * This avoids exporting the entire node as PNG, which can include unwanted backgrounds
+ */
+export const exportImageFromHash = async (imageRef: string): Promise<string | null> => {
+  try {
+    // Get the image bytes from Figma using the image hash
+    const image = figma.getImageByHash(imageRef);
+    if (!image) {
+      console.warn(`Failed to get image for hash: ${imageRef}`);
+      return null;
+    }
+
+    // Get the image bytes
+    const bytes = await image.getBytesAsync();
+    if (!bytes) {
+      console.warn(`Failed to get bytes for image hash: ${imageRef}`);
+      return null;
+    }
+
+    // Convert to base64
+    return imageBytesToBase64(bytes);
+  } catch (error) {
+    console.error(`Error exporting image from hash ${imageRef}:`, error);
+    return null;
+  }
 };
 
 export const exportNodeAsBase64PNG = async <T extends ExportableNode>(

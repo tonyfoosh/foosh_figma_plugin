@@ -91,6 +91,32 @@ const safeRun = async (settings: PluginSettings) => {
     "selection =",
     figma.currentPage.selection,
   );
+
+  // Filter selection: If a Frame with a single child is selected,
+  // check if the user likely intended to select the child instead
+  let rawSelection = figma.currentPage.selection;
+  if (rawSelection.length === 1) {
+    const selectedNode = rawSelection[0];
+    console.log("[DEBUG] safeRun - Single node selected:", {
+      type: selectedNode.type,
+      name: selectedNode.name,
+      hasChildren: "children" in selectedNode ? selectedNode.children.length : 0
+    });
+
+    // If it's a Frame/Group with exactly one child, use the child instead
+    if ((selectedNode.type === "FRAME" || selectedNode.type === "GROUP") &&
+        "children" in selectedNode &&
+        selectedNode.children.length === 1) {
+      const child = selectedNode.children[0];
+      console.log("[DEBUG] safeRun - Frame/Group has single child, using child instead:", {
+        childType: child.type,
+        childName: child.name
+      });
+      // Override the selection to use the child
+      figma.currentPage.selection = [child];
+    }
+  }
+
   if (isLoading === false) {
     try {
       isLoading = true;
