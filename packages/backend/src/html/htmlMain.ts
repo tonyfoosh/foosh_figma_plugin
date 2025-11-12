@@ -688,12 +688,19 @@ const htmlFrame = async (
 ): Promise<string> => {
   const childrenStr = await htmlWidgetGenerator(node.children, settings);
 
-  if (node.layoutMode !== "NONE") {
+  // Check if frame has rotation (including cumulative rotation from inlined GROUP parents)
+  const rotation =
+    -Math.round((node.rotation || 0) + (node.cumulativeRotation || 0)) || 0;
+  const hasRotation = rotation !== 0;
+
+  // If frame has both auto-layout AND rotation, treat it as absolute positioning
+  // because flexbox layout is calculated before CSS transforms, causing incorrect positioning
+  if (node.layoutMode !== "NONE" && !hasRotation) {
     const rowColumn = htmlAutoLayoutProps(node, settings);
     return await htmlContainer(node, childrenStr, rowColumn, settings);
   }
 
-  // node.layoutMode === "NONE" && node.children.length > 1
+  // node.layoutMode === "NONE" OR frame has rotation
   // children needs to be absolute
   return await htmlContainer(node, childrenStr, [], settings);
 };
