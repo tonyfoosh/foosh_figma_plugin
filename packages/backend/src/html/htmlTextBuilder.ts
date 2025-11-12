@@ -14,6 +14,41 @@ import {
   fontCollector,
 } from "./htmlMain";
 
+/**
+ * Extract font weight from font family name.
+ * Many fonts include weight information in the family name (e.g., "Gilroy-SemiBold").
+ * This function attempts to extract that weight and map it to a numeric value.
+ */
+function extractFontWeight(fontFamily: string, fallbackWeight: number): number {
+  const weightMap: Record<string, number> = {
+    'thin': 100,
+    'extralight': 200,
+    'ultralight': 200,
+    'light': 300,
+    'regular': 400,
+    'normal': 400,
+    'medium': 500,
+    'semibold': 600,
+    'demibold': 600,
+    'bold': 700,
+    'extrabold': 800,
+    'ultrabold': 800,
+    'black': 900,
+    'heavy': 900,
+  };
+
+  const nameLower = fontFamily.toLowerCase();
+
+  // Check for weight keywords in the font family name
+  for (const [name, weight] of Object.entries(weightMap)) {
+    if (nameLower.includes(name)) {
+      return weight;
+    }
+  }
+
+  return fallbackWeight;
+}
+
 export class HtmlTextBuilder extends HtmlDefaultBuilder {
   constructor(node: TextNode, settings: HTMLSettings) {
     super(node, settings);
@@ -63,7 +98,7 @@ export class HtmlTextBuilder extends HtmlDefaultBuilder {
           "font-size": segment.fontSize,
           "font-family": segment.fontName.family,
           "font-style": this.getFontStyle(segment.fontName.style),
-          "font-weight": `${segment.fontWeight}`,
+          "font-weight": `${extractFontWeight(segment.fontName.family, segment.fontWeight)}`,
           "text-decoration": this.textDecoration(segment.textDecoration),
           "text-transform": this.textTransform(segment.textCase),
           "line-height": this.lineHeight(segment.lineHeight, segment.fontSize),
@@ -180,7 +215,7 @@ export class HtmlTextBuilder extends HtmlDefaultBuilder {
 
   letterSpacing(letterSpacing: LetterSpacing, fontSize: number): number | null {
     const letterSpacingProp = commonLetterSpacing(letterSpacing, fontSize);
-    if (letterSpacingProp > 0) {
+    if (letterSpacingProp !== 0) {
       return letterSpacingProp;
     }
     return null;

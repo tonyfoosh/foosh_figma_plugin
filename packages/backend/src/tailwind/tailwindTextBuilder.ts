@@ -162,7 +162,7 @@ export class TailwindTextBuilder extends TailwindDefaultBuilder {
    */
   letterSpacing(letterSpacing: LetterSpacing, fontSize: number): string {
     const letterSpacingProp = commonLetterSpacing(letterSpacing, fontSize);
-    if (letterSpacingProp > 0) {
+    if (letterSpacingProp !== 0) {
       const value = pxToLetterSpacing(letterSpacingProp);
       return `tracking-${value}`;
     }
