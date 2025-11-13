@@ -1,6 +1,6 @@
 import { indentString } from "../common/indentString";
 import { HtmlTextBuilder } from "./htmlTextBuilder";
-import { HtmlDefaultBuilder } from "./htmlDefaultBuilder";
+import { HtmlDefaultBuilder, resetElementIdCounter } from "./htmlDefaultBuilder";
 import { htmlAutoLayoutProps } from "./builderImpl/htmlAutoLayout";
 import { formatWithJSX } from "../common/parseJSX";
 import {
@@ -53,6 +53,7 @@ interface CSSCollection {
     nodeName?: string;
     nodeType?: string;
     element?: string; // Base HTML element to use
+    pseudoElementStyles?: string[]; // Styles for ::before pseudo-element (gradient borders)
   };
 }
 
@@ -152,9 +153,23 @@ export function getCollectedCSS(): string {
   }
 
   return Object.entries(cssCollection)
-    .map(([className, { styles }]) => {
-      if (!styles.length) return "";
-      return `.${className} {\n  ${styles.join(";\n  ")}${styles.length ? ";" : ""}\n}`;
+    .map(([className, { styles, pseudoElementStyles }]) => {
+      if (!styles.length && !pseudoElementStyles?.length) return "";
+
+      let css = "";
+
+      // Main element styles
+      if (styles.length) {
+        css += `.${className} {\n  ${styles.join(";\n  ")}${styles.length ? ";" : ""}\n}`;
+      }
+
+      // Pseudo-element styles (::before for gradient borders)
+      if (pseudoElementStyles?.length) {
+        if (css) css += "\n\n";
+        css += `.${className}::before {\n  ${pseudoElementStyles.join(";\n  ")}${pseudoElementStyles.length ? ";" : ""}\n}`;
+      }
+
+      return css;
     })
     .filter(Boolean)
     .join("\n\n");
@@ -165,9 +180,9 @@ export function generateStyledComponents(): string {
   const components: string[] = [];
 
   Object.entries(cssCollection).forEach(
-    ([className, { styles, nodeName, nodeType, element }]) => {
+    ([className, { styles, nodeName, nodeType, element, pseudoElementStyles }]) => {
       // Skip if no styles
-      if (!styles.length) return;
+      if (!styles.length && !pseudoElementStyles?.length) return;
 
       // Determine base HTML element - defaults to div
       const baseElement = element || (nodeType === "TEXT" ? "p" : "div");
@@ -177,9 +192,17 @@ export function generateStyledComponents(): string {
         baseElement,
       );
 
-      const styledComponent = `const ${componentName} = styled.${baseElement}\`
-  ${styles.join(";\n  ")}${styles.length ? ";" : ""}
-\`;`;
+      let styledComponent = `const ${componentName} = styled.${baseElement}\`
+  ${styles.join(";\n  ")}${styles.length ? ";" : ""}`;
+
+      // Add pseudo-element styles using & syntax
+      if (pseudoElementStyles?.length) {
+        styledComponent += `\n\n  &::before {
+    ${pseudoElementStyles.join(";\n    ")}${pseudoElementStyles.length ? ";" : ""}
+  }`;
+      }
+
+      styledComponent += `\n\`;`;
 
       components.push(styledComponent);
     },
@@ -263,14 +286,36 @@ export function getSvelteClassName(prefix?: string, nodeType?: string): string {
 
 // Generate font imports as HTML link and style tags
 function generateFontImportsHTML(): string {
+  const globalCSSReset = `/* Figma-to-HTML Global Reset */
+* {
+  box-sizing: border-box;
+}
+
+body, p, span, div {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font: inherit;
+  vertical-align: baseline;
+}
+
+body {
+  line-height: 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}`;
+
+  const parts: string[] = [];
+
+  // Always add CSS reset first
+  parts.push(`<style>\n${globalCSSReset}\n</style>`);
+
   if (!fontCollector.hasFonts()) {
-    return "";
+    return parts.join("\n") + "\n\n";
   }
 
   const { googleFontsUrl, customFontsCss, comment } =
     fontCollector.generateFontCSS();
-
-  const parts: string[] = [];
 
   // Add comment about fonts
   if (comment) {
@@ -381,13 +426,22 @@ function generateSvelteComponent(html: string): string {
   // Build CSS classes similar to styled-components but for Svelte
   const cssRules: string[] = [];
 
-  Object.entries(cssCollection).forEach(([className, { styles }]) => {
-    if (!styles.length) return;
+  Object.entries(cssCollection).forEach(([className, { styles, pseudoElementStyles }]) => {
+    if (!styles.length && !pseudoElementStyles?.length) return;
 
-    // Always use class selector to avoid conflicts
-    cssRules.push(
-      `.${className} {\n  ${styles.join(";\n  ")}${styles.length ? ";" : ""}\n}`,
-    );
+    // Main element styles
+    if (styles.length) {
+      cssRules.push(
+        `.${className} {\n  ${styles.join(";\n  ")}${styles.length ? ";" : ""}\n}`,
+      );
+    }
+
+    // Pseudo-element styles (::before for gradient borders)
+    if (pseudoElementStyles?.length) {
+      cssRules.push(
+        `.${className}::before {\n  ${pseudoElementStyles.join(";\n  ")}${pseudoElementStyles.length ? ";" : ""}\n}`,
+      );
+    }
   });
 
   // Generate font imports for CSS
@@ -409,6 +463,7 @@ export const htmlMain = async (
   previousExecutionCache = [];
   cssCollection = {};
   resetClassNameCounters(); // Reset counters for each new generation
+  resetElementIdCounter(); // Reset element ID counter for each new generation
   fontCollector.clear(); // Reset font collector for each new generation
 
   let htmlContent = await htmlWidgetGenerator(sceneNode, settings);
@@ -857,6 +912,12 @@ const htmlContainer = async (
     const build = builder.build(additionalStyles);
     const mode = settings.htmlGenerationMode || "html";
 
+    // Generate inline style tag for pseudo-element styles (gradient borders)
+    const inlineStyleTag =
+      mode === "html" || mode === "jsx"
+        ? builder.generateInlinePseudoElementStyles()
+        : "";
+
     // For styled-components mode
     if (mode === "styled-components" && builder.cssClassName) {
       const componentName = getComponentName(node, builder.cssClassName);
@@ -870,14 +931,14 @@ const htmlContainer = async (
 
     // Standard HTML approach for HTML, React, or Svelte
     if (children) {
-      return `\n<${tag}${build}${src}>${indentString(children)}\n</${tag}>`;
+      return `${inlineStyleTag}\n<${tag}${build}${src}>${indentString(children)}\n</${tag}>`;
     } else if (
       selfClosingTags.includes(tag) ||
       settings.htmlGenerationMode === "jsx"
     ) {
-      return `\n<${tag}${build}${src} />`;
+      return `${inlineStyleTag}\n<${tag}${build}${src} />`;
     } else {
-      return `\n<${tag}${build}${src}></${tag}>`;
+      return `${inlineStyleTag}\n<${tag}${build}${src}></${tag}>`;
     }
   }
 

@@ -158,6 +158,25 @@ export const htmlGradientFromFills = (fill: Paint): string => {
  * Generate CSS linear gradient
  */
 export const htmlLinearGradient = (fill: GradientPaint) => {
+  // Validate required data
+  if (!fill.gradientHandlePositions || fill.gradientHandlePositions.length < 2) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('[htmlLinearGradient] Missing or invalid gradientHandlePositions', fill);
+    }
+    // Fallback to default linear gradient
+    const fallbackStops = fill.gradientStops ?
+      processGradientStops(fill.gradientStops, fill.opacity ?? 1) :
+      'rgba(0,0,0,0) 0%, rgba(0,0,0,1) 100%';
+    return `linear-gradient(180deg, ${fallbackStops})`;
+  }
+
+  if (!fill.gradientStops || fill.gradientStops.length === 0) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('[htmlLinearGradient] Missing or empty gradientStops', fill);
+    }
+    return "";
+  }
+
   const [start, end] = fill.gradientHandlePositions;
   const dx = end.x - start.x;
   const dy = end.y - start.y;
@@ -175,6 +194,25 @@ export const htmlLinearGradient = (fill: GradientPaint) => {
  * Generate CSS radial gradient
  */
 export const htmlRadialGradient = (fill: GradientPaint) => {
+  // Validate required data
+  if (!fill.gradientHandlePositions || fill.gradientHandlePositions.length < 3) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('[htmlRadialGradient] Missing or invalid gradientHandlePositions (needs 3)', fill);
+    }
+    // Fallback to default radial gradient
+    const fallbackStops = fill.gradientStops ?
+      processGradientStops(fill.gradientStops, fill.opacity ?? 1) :
+      'rgba(0,0,0,0) 0%, rgba(0,0,0,1) 100%';
+    return `radial-gradient(circle at 50% 50%, ${fallbackStops})`;
+  }
+
+  if (!fill.gradientStops || fill.gradientStops.length === 0) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('[htmlRadialGradient] Missing or empty gradientStops', fill);
+    }
+    return "";
+  }
+
   const [center, h1, h2] = fill.gradientHandlePositions;
   const cx = center.x * 100; // Center X as percentage
   const cy = center.y * 100; // Center Y as percentage
@@ -193,6 +231,25 @@ export const htmlRadialGradient = (fill: GradientPaint) => {
  * Generate CSS conic (angular) gradient
  */
 export const htmlAngularGradient = (fill: GradientPaint) => {
+  // Validate required data
+  if (!fill.gradientHandlePositions || fill.gradientHandlePositions.length < 3) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('[htmlAngularGradient] Missing or invalid gradientHandlePositions (needs 3)', fill);
+    }
+    // Fallback to default conic gradient
+    const fallbackStops = fill.gradientStops ?
+      processGradientStops(fill.gradientStops, fill.opacity ?? 1, 360, "deg") :
+      'rgba(0,0,0,0) 0deg, rgba(0,0,0,1) 360deg';
+    return `conic-gradient(from 0deg at 50% 50%, ${fallbackStops})`;
+  }
+
+  if (!fill.gradientStops || fill.gradientStops.length === 0) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('[htmlAngularGradient] Missing or empty gradientStops', fill);
+    }
+    return "";
+  }
+
   const [center, _, startDirection] = fill.gradientHandlePositions;
   const cx = center.x * 100; // Center X as percentage
   const cy = center.y * 100; // Center Y as percentage
@@ -214,6 +271,15 @@ export const htmlAngularGradient = (fill: GradientPaint) => {
  * Generate CSS diamond gradient (approximation using four linear gradients)
  */
 export const htmlDiamondGradient = (fill: GradientPaint) => {
+  // Validate required data
+  if (!fill.gradientStops || fill.gradientStops.length === 0) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('[htmlDiamondGradient] Missing or empty gradientStops', fill);
+    }
+    // Fallback to simple gradient
+    return 'linear-gradient(135deg, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 100%)';
+  }
+
   const stops = processGradientStops(
     fill.gradientStops,
     fill.opacity ?? 1,
@@ -281,4 +347,102 @@ export const buildBackgroundValues = (
   });
 
   return styles.filter((value) => value !== "").join(", ");
+};
+
+/**
+ * Check if a stroke contains any gradient paints
+ * Only checks visible strokes (visible !== false)
+ */
+export const isGradientStroke = (
+  strokes: ReadonlyArray<Paint> | undefined,
+): boolean => {
+  if (!strokes || strokes.length === 0) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[isGradientStroke] No strokes to check');
+    }
+    return false;
+  }
+
+  const hasGradient = strokes.some(
+    (stroke) =>
+      stroke.visible !== false &&
+      (stroke.type === "GRADIENT_LINEAR" ||
+        stroke.type === "GRADIENT_RADIAL" ||
+        stroke.type === "GRADIENT_ANGULAR" ||
+        stroke.type === "GRADIENT_DIAMOND"),
+  );
+
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[isGradientStroke] Checking strokes:', {
+      strokeCount: strokes.length,
+      strokeTypes: strokes.map(s => ({ type: s.type, visible: s.visible })),
+      hasGradient,
+    });
+  }
+
+  return hasGradient;
+};
+
+/**
+ * Generate CSS border-image value for gradient strokes
+ * border-image works better for gradients on borders than regular border property
+ */
+export const htmlBorderImageFromStrokes = (
+  strokes: ReadonlyArray<Paint> | undefined,
+): string => {
+  if (!strokes || strokes.length === 0) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[htmlBorderImageFromStrokes] No strokes provided');
+    }
+    return "";
+  }
+
+  const topStroke = retrieveTopFill(strokes);
+  if (!topStroke) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[htmlBorderImageFromStrokes] No visible stroke found');
+    }
+    return "";
+  }
+
+  // Debug logging
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[htmlBorderImageFromStrokes] Processing stroke:', {
+      type: topStroke.type,
+      visible: (topStroke as any).visible,
+      hasGradientHandles: !!(topStroke as any).gradientHandlePositions,
+      hasGradientStops: !!(topStroke as any).gradientStops,
+      gradientHandlesLength: (topStroke as any).gradientHandlePositions?.length,
+      gradientStopsLength: (topStroke as any).gradientStops?.length,
+    });
+  }
+
+  // Only handle gradient types
+  if (
+    topStroke.type === "GRADIENT_LINEAR" ||
+    topStroke.type === "GRADIENT_RADIAL" ||
+    topStroke.type === "GRADIENT_ANGULAR" ||
+    topStroke.type === "GRADIENT_DIAMOND"
+  ) {
+    const gradient = htmlGradientFromFills(topStroke);
+
+    if (!gradient) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn('[htmlBorderImageFromStrokes] Gradient generation failed for type:', topStroke.type);
+      }
+      return "";
+    }
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[htmlBorderImageFromStrokes] Generated gradient:', gradient);
+    }
+
+    return `${gradient} 1`;
+  }
+
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[htmlBorderImageFromStrokes] Stroke type not gradient:', topStroke.type);
+  }
+
+  return "";
 };

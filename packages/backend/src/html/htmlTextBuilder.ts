@@ -49,6 +49,24 @@ function extractFontWeight(fontFamily: string, fallbackWeight: number): number {
   return fallbackWeight;
 }
 
+/**
+ * Normalizes font family names by removing weight suffixes.
+ * This ensures CSS font-family matches @font-face declarations.
+ *
+ * Examples:
+ * - "Gilroy-Bold" → "Gilroy"
+ * - "Roboto-Medium" → "Roboto"
+ * - "Inter-SemiBold" → "Inter"
+ */
+function normalizeFontFamily(fontFamily: string): string {
+  // Remove common weight suffixes (case-insensitive)
+  // This pattern matches a hyphen followed by weight names at the end of the string
+  return fontFamily.replace(
+    /-(?:Thin|ExtraLight|UltraLight|Light|Regular|Normal|Medium|SemiBold|DemiBold|Bold|ExtraBold|UltraBold|Black|Heavy)$/i,
+    ''
+  );
+}
+
 export class HtmlTextBuilder extends HtmlDefaultBuilder {
   constructor(node: TextNode, settings: HTMLSettings) {
     super(node, settings);
@@ -74,10 +92,16 @@ export class HtmlTextBuilder extends HtmlDefaultBuilder {
 
     return segments.map((segment, index) => {
       // Collect font information for later import generation
+      // Extract the correct font weight from the family name (e.g., "Gilroy-Bold" -> 700)
+      const extractedWeight = extractFontWeight(segment.fontName.family, segment.fontWeight);
+      // Use normalized font family for consistency between CSS and @font-face
+      const normalizedFamily = normalizeFontFamily(segment.fontName.family);
+
       fontCollector.addFont(
-        segment.fontName.family,
-        segment.fontWeight,
+        normalizedFamily,
+        extractedWeight,  // Use extracted weight instead of raw fontWeight for correct @font-face
         segment.fontName.style,
+        segment.fontName.family  // Pass original family for S3 URL construction
       );
 
       // Prepare additional CSS properties from layer blur and drop shadow effects.
@@ -94,9 +118,19 @@ export class HtmlTextBuilder extends HtmlDefaultBuilder {
 
       const styleAttributes = formatMultipleJSX(
         {
+          // CSS Reset for text elements
+          "margin": 0,
+          "padding": 0,
+          "box-sizing": "border-box",
+
+          // Display and positioning
+          "display": "inline-block",
+          "vertical-align": "baseline",
+
+          // Typography
           color: htmlColorFromFills(segment.fills as any),
           "font-size": segment.fontSize,
-          "font-family": segment.fontName.family,
+          "font-family": normalizeFontFamily(segment.fontName.family),
           "font-style": this.getFontStyle(segment.fontName.style),
           "font-weight": `${extractFontWeight(segment.fontName.family, segment.fontWeight)}`,
           "text-decoration": this.textDecoration(segment.textDecoration),
@@ -106,8 +140,20 @@ export class HtmlTextBuilder extends HtmlDefaultBuilder {
             segment.letterSpacing,
             segment.fontSize,
           ),
-          // "text-indent": segment.indentation,
+
+          // Font rendering optimizations for cross-browser consistency
+          "-webkit-font-smoothing": "antialiased",
+          "-moz-osx-font-smoothing": "grayscale",
+          "text-rendering": "optimizeLegibility",
+
+          // Text size and wrapping
+          "text-size-adjust": "100%",
+          "-webkit-text-size-adjust": "100%",
+          "white-space": "pre-wrap",
           "word-wrap": "break-word",
+          "overflow-wrap": "break-word",
+
+          // "text-indent": segment.indentation,
           ...additionalStyles,
         },
         this.isJSX,
@@ -213,9 +259,10 @@ export class HtmlTextBuilder extends HtmlDefaultBuilder {
     }
   }
 
-  letterSpacing(letterSpacing: LetterSpacing, fontSize: number): number | null {
+  letterSpacing(letterSpacing: LetterSpacing, fontSize: number): number | string | null {
     const letterSpacingProp = commonLetterSpacing(letterSpacing, fontSize);
-    if (letterSpacingProp !== 0) {
+    // Check for both zero number and zero string (won't happen but for completeness)
+    if (letterSpacingProp !== 0 && letterSpacingProp !== "0") {
       return letterSpacingProp;
     }
     return null;

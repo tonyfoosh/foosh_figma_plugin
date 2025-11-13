@@ -1,8 +1,12 @@
 import { indentStringFlutter } from "./indentString";
 
 // this is necessary to avoid a height of 4.999999523162842.
+// Uses higher precision for small values (text metrics like line-height, letter-spacing)
 export const numberToFixedString = (num: number): string => {
-  return num.toFixed(2).replace(/\.00$/, "");
+  // For small values (< 10), use 3 decimal places for better typography precision
+  // For larger values (dimensions), use 2 decimal places
+  const precision = Math.abs(num) < 10 ? 3 : 2;
+  return num.toFixed(precision).replace(/\.?0+$/, "");
 };
 
 export const roundToNearestDecimal = (decimal: number) => (n: number) =>

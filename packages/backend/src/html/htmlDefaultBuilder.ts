@@ -9,7 +9,10 @@ import {
 import {
   buildBackgroundValues,
   htmlColorFromFills,
+  isGradientStroke,
+  htmlBorderImageFromStrokes,
 } from "./builderImpl/htmlColor";
+import { htmlGradientBorderStyles } from "./builderImpl/htmlGradientBorder";
 import { htmlPadding } from "./builderImpl/htmlPadding";
 import { htmlSizePartial } from "./builderImpl/htmlSize";
 import { htmlBorderRadius } from "./builderImpl/htmlBorderRadius";
@@ -34,12 +37,21 @@ import {
   stylesToCSS,
 } from "./htmlMain";
 
+let elementIdCounter = 0;
+
+// Reset element ID counter - call this at the start of processing
+export function resetElementIdCounter(): void {
+  elementIdCounter = 0;
+}
+
 export class HtmlDefaultBuilder {
   styles: Array<string>;
   data: Array<string>;
   node: SceneNode;
   settings: HTMLSettings;
   cssClassName: string | null = null;
+  pseudoElementStyles: Array<string> = [];
+  elementId: string | null = null;
 
   get name() {
     if (this.settings.htmlGenerationMode === "styled-components") {
@@ -158,14 +170,50 @@ export class HtmlDefaultBuilder {
     }
 
     const strokes = ("strokes" in node && node.strokes) || undefined;
+    const strokeAlign = "strokeAlign" in node ? node.strokeAlign : "INSIDE";
+
+    // Check if this is a gradient stroke
+    const hasGradientStroke = isGradientStroke(strokes);
+
+    // Debug logging for gradient border detection
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[DEBUG] Gradient border check:', {
+        hasGradientStroke,
+        strokesLength: strokes?.length,
+        strokeTypes: strokes?.map(s => ({ type: s.type, visible: s.visible })),
+        strokeAlign,
+        commonBorder
+      });
+    }
+
+    if (hasGradientStroke) {
+      // Use pseudo-element approach for gradient borders
+      // This ensures the border layers ABOVE the background
+      const gradientStyles = htmlGradientBorderStyles(
+        strokes,
+        strokeAlign,
+        commonBorder,
+        this.isJSX,
+      );
+
+      if (gradientStyles.needsPseudoElement) {
+        // Add element styles (position: relative, etc.)
+        this.addStyles(...gradientStyles.elementStyles);
+
+        // Store pseudo-element styles for CSS generation
+        this.pseudoElementStyles.push(...gradientStyles.pseudoElementStyles);
+      }
+
+      return this;
+    }
+
+    // Original code for solid color strokes
     const color = htmlColorFromFills(strokes as any);
     if (!color) {
       return this;
     }
     const borderStyle =
       "dashPattern" in node && node.dashPattern.length > 0 ? "dotted" : "solid";
-
-    const strokeAlign = "strokeAlign" in node ? node.strokeAlign : "INSIDE";
 
     // Function to create border value string
     const consolidateBorders = (border: number): string =>
@@ -423,6 +471,28 @@ export class HtmlDefaultBuilder {
     return this;
   }
 
+  // Generate a unique element ID for inline pseudo-element styles
+  generateElementId(): string {
+    if (!this.elementId) {
+      elementIdCounter++;
+      this.elementId = `figma-el-${elementIdCounter}`;
+    }
+    return this.elementId;
+  }
+
+  // Generate inline <style> tag for pseudo-element styles
+  generateInlinePseudoElementStyles(): string {
+    if (this.pseudoElementStyles.length === 0) {
+      return "";
+    }
+
+    const id = this.generateElementId();
+    const cssStyles = stylesToCSS(this.pseudoElementStyles, this.isJSX);
+    const styleContent = cssStyles.join(";\n  ");
+
+    return `<style>\n#${id}::before {\n  ${styleContent};\n}\n</style>\n`;
+  }
+
   build(additionalStyle: Array<string> = []): string {
     this.addStyles(...additionalStyle);
 
@@ -501,7 +571,17 @@ export class HtmlDefaultBuilder {
     // Style attribute
     const styleAttribute = formatStyleAttribute(this.styles, this.isJSX);
 
-    return `${dataAttributes}${classAttribute}${styleAttribute}`;
+    // ID attribute for inline pseudo-element styles
+    let idAttribute = "";
+    if (
+      (mode === "html" || mode === "jsx") &&
+      this.pseudoElementStyles.length > 0
+    ) {
+      const id = this.generateElementId();
+      idAttribute = ` id="${id}"`;
+    }
+
+    return `${dataAttributes}${classAttribute}${idAttribute}${styleAttribute}`;
   }
 
   // Extract style storage into a method to avoid duplication
@@ -533,6 +613,11 @@ export class HtmlDefaultBuilder {
         undefined,
       nodeType: this.node.type,
       element: element,
+      // Add pseudo-element styles if present
+      pseudoElementStyles:
+        this.pseudoElementStyles.length > 0
+          ? stylesToCSS(this.pseudoElementStyles, this.isJSX)
+          : undefined,
     };
   }
 }

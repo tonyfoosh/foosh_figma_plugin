@@ -7,6 +7,7 @@ import { getFontDataUri } from './fontEmbeds';
 
 interface FontInfo {
   family: string;
+  originalFamily?: string; // Store original font family name for S3 URL construction
   weights: Set<number>;
   styles: Set<string>;
 }
@@ -77,8 +78,12 @@ export class FontCollector {
 
   /**
    * Add a font to the collection
+   * @param family - The normalized font family name (e.g., "Gilroy")
+   * @param weight - The font weight (e.g., 700)
+   * @param style - The font style (e.g., "normal")
+   * @param originalFamily - The original font family name from Figma (e.g., "Gilroy-Bold")
    */
-  addFont(family: string, weight: number = 400, style: string = "normal"): void {
+  addFont(family: string, weight: number = 400, style: string = "normal", originalFamily?: string): void {
     if (!family) return;
 
     // Normalize font family name (remove quotes, trim)
@@ -87,6 +92,7 @@ export class FontCollector {
     if (!this.fonts.has(normalizedFamily)) {
       this.fonts.set(normalizedFamily, {
         family: normalizedFamily,
+        originalFamily: originalFamily || normalizedFamily,
         weights: new Set([weight]),
         styles: new Set([style]),
       });
@@ -94,6 +100,10 @@ export class FontCollector {
       const fontInfo = this.fonts.get(normalizedFamily)!;
       fontInfo.weights.add(weight);
       fontInfo.styles.add(style);
+      // Update originalFamily if provided and not already set
+      if (originalFamily && !fontInfo.originalFamily) {
+        fontInfo.originalFamily = originalFamily;
+      }
     }
   }
 
@@ -146,20 +156,25 @@ export class FontCollector {
   src: url('${dataUri}') format('woff2');
   font-weight: ${weight};
   font-style: normal;
-  font-display: swap;
+  font-display: block;
 }`;
         } else {
           // Fallback to S3 URL if base64 not available
           const FONT_BASE_URL = "https://async-workflow-outputs.s3.amazonaws.com/fonts";
           const weightName = this.getWeightName(weight);
-          const fileName = `${font.family.replace(/ /g, "")}-${weightName}`;
+
+          // Use original family name for S3 URL construction
+          // For fonts like "Gilroy-Black", S3 has "Gilroy-Black-Black.woff2"
+          // (original name + weight suffix)
+          const originalName = font.originalFamily || font.family;
+          const fileName = `${originalName.replace(/ /g, "")}-${weightName}`;
 
           return `@font-face {
   font-family: '${font.family}';
   src: url('${FONT_BASE_URL}/${fileName}.woff2') format('woff2');
   font-weight: ${weight};
   font-style: normal;
-  font-display: swap;
+  font-display: block;
 }`;
         }
       });
